@@ -7,7 +7,7 @@ if (typeof AdaptiveCards === 'undefined') {
 document.addEventListener('DOMContentLoaded', () => {
     // Get DOM elements
     const appDescription = document.getElementById('appDescription');
-    const apiKey = document.getElementById('apiKey');
+    const apiKeyInput = document.getElementById('apiKeyInput');
     const generateBtn = document.getElementById('generateBtn');
     const backgroundColor = document.getElementById('backgroundColor');
     const backgroundImage = document.getElementById('backgroundImage');
@@ -305,44 +305,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Function to generate card from description
     async function generateCardFromDescription(description) {
-        const apiKey = apiKey.value;
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: "gpt-3.5-turbo",
-                messages: [
-                    {
-                        role: "system",
-                        content: "You are a helpful assistant that generates Adaptive Cards JSON. Create visually appealing cards that follow best practices for layout and design."
-                    },
-                    {
-                        role: "user",
-                        content: `Create an Adaptive Card JSON for: ${description}. Make it visually appealing and functional. Add structure input fields, buttons, and other interactive elements to make it user-friendly. If the card is a list, make the elements visually distinct and easy to navigate.`
-                    }
-                ],
-                temperature: 0.7
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        const apiKey = apiKeyInput.value.trim();
+        
+        if (!apiKey) {
+            throw new Error('Please enter your OpenAI API key');
         }
 
-        const data = await response.json();
-        const cardJson = data.choices[0].message.content;
-        
         try {
-            return JSON.parse(cardJson);
-        } catch (error) {
-            const jsonMatch = cardJson.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                return JSON.parse(jsonMatch[0]);
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: "gpt-3.5-turbo",
+                    messages: [
+                        {
+                            role: "system",
+                            content: "You are a helpful assistant that generates Adaptive Cards JSON. Create visually appealing cards that follow best practices for layout and design."
+                        },
+                        {
+                            role: "user",
+                            content: `Create an Adaptive Card JSON for: ${description}. Make it visually appealing and functional. Add structure input fields, buttons, and other interactive elements to make it user-friendly. If the card is a list, make the elements visually distinct and easy to navigate.`
+                        }
+                    ],
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => null);
+                console.error('API Error:', errorData);
+                throw new Error(`API request failed: ${response.status} ${response.statusText}`);
             }
-            throw new Error('Invalid JSON response from API');
+
+            const data = await response.json();
+            const cardJson = JSON.parse(data.choices[0].message.content);
+            return cardJson;
+        } catch (error) {
+            console.error('Error details:', error);
+            throw error;
         }
     }
 
