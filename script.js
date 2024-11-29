@@ -93,18 +93,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // Apply host config
     adaptiveCard.hostConfig = new AdaptiveCards.HostConfig(hostConfig);
 
-    // Theme toggle functionality
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    htmlElement.setAttribute('data-theme', savedTheme);
-    updateThemeStyles(savedTheme);
+    // Initialize theme from localStorage or system preference
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+    
+    // Set initial theme
+    htmlElement.setAttribute('data-theme', initialTheme);
+    themeToggle.checked = initialTheme === 'dark';
 
-    themeToggle.addEventListener('click', () => {
-        const currentTheme = htmlElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    // Theme toggle handler
+    themeToggle.addEventListener('change', () => {
+        const newTheme = themeToggle.checked ? 'dark' : 'light';
         htmlElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
         updateThemeStyles(newTheme);
     });
+
+    // Listen for system theme changes
+    if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (!localStorage.getItem('theme')) {
+                const newTheme = e.matches ? 'dark' : 'light';
+                htmlElement.setAttribute('data-theme', newTheme);
+                themeToggle.checked = e.matches;
+                updateThemeStyles(newTheme);
+            }
+        });
+    }
 
     function updateThemeStyles(theme) {
         if (!microApp.style.backgroundImage || microApp.style.backgroundImage === 'none') {
