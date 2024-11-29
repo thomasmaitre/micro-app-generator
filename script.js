@@ -242,12 +242,13 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error generating card:', error);
             let errorMessage = 'Error generating card. Please try again.';
             
-            if (error.message.includes('temporarily busy') || error.message.includes('rate limit')) {
-                errorMessage = 'The service is temporarily busy. Please try again in a few moments.';
-            } else if (error.message.includes('API key')) {
-                errorMessage = 'Server configuration error. Please contact support.';
-            } else if (error.message.includes('parse')) {
-                errorMessage = 'Error processing AI response. Please try again with a different description.';
+            if (error.response?.status === 429 || error.message?.includes('rate limit')) {
+                errorMessage = 'The AI service is currently at capacity. Please try again in about an hour.';
+                // Disable the generate button for a short time to prevent spam
+                generateBtn.disabled = true;
+                setTimeout(() => {
+                    generateBtn.disabled = false;
+                }, 10000); // Re-enable after 10 seconds
             }
             
             alert(errorMessage);
@@ -257,6 +258,38 @@ document.addEventListener('DOMContentLoaded', () => {
             generateBtn.innerHTML = 'Generate Card';
         }
     });
+
+    // Function to generate card from description
+    async function generateCardFromDescription(description) {
+        try {
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const API_URL = isLocalhost ? 'http://localhost:3000' : 'https://web-production-72b3.up.railway.app';
+            
+            console.log('Making request to:', `${API_URL}/generate-card`);
+            const response = await fetch(`${API_URL}/generate-card`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ description })
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok) {
+                const error = new Error(data.error || 'Failed to generate card');
+                error.response = response;
+                error.details = data.details;
+                throw error;
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Request failed:', error);
+            throw error;
+        }
+    }
 
     // Download functionality
     downloadBtn.addEventListener('click', function() {
@@ -330,49 +363,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 downloadBtn.textContent = 'Download & Host';
             });
     });
-
-    // Function to generate card from description
-    async function generateCardFromDescription(description) {
-        try {
-            // Use localhost for local development, production URL for deployed version
-            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const API_URL = isLocalhost ? 'http://localhost:3000' : 'https://web-production-72b3.up.railway.app';
-            console.log('Making request to:', `${API_URL}/generate-card`);
-            console.log('Description:', description);
-            
-            const response = await fetch(`${API_URL}/generate-card`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({ description })
-            });
-
-            console.log('Response status:', response.status);
-            const responseData = await response.json();
-            console.log('Response data:', responseData);
-
-            if (!response.ok) {
-                throw new Error(responseData.error || responseData.details || 'Failed to generate card');
-            }
-
-            // Validate that the response is a valid Adaptive Card
-            if (!responseData.type || responseData.type !== 'AdaptiveCard') {
-                console.error('Invalid card format:', responseData);
-                throw new Error('Invalid Adaptive Card format');
-            }
-
-            return responseData;
-        } catch (error) {
-            console.error('Detailed error:', {
-                message: error.message,
-                stack: error.stack,
-                response: error.response
-            });
-            throw error;
-        }
-    }
 
     // Function to render card
     function renderCard(cardJson) {
