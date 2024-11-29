@@ -223,7 +223,11 @@ document.addEventListener('DOMContentLoaded', () => {
             renderCard(card);
         } catch (error) {
             console.error('Error generating card:', error);
-            alert('Error generating card. Please try again.');
+            if (error.message.includes('temporarily busy') || error.message.includes('rate limit')) {
+                alert('The service is temporarily busy. Please try again in a few moments.');
+            } else {
+                alert('Error generating card. Please try again.');
+            }
         } finally {
             generateBtn.disabled = false;
             generateBtn.textContent = 'Generate Card';
@@ -306,7 +310,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Function to generate card from description
     async function generateCardFromDescription(description) {
         try {
-            const response = await fetch('http://localhost:3000/generate-card', {
+            const API_URL = 'https://web-production-72b3.up.railway.app';
+            const response = await fetch(`${API_URL}/generate-card`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

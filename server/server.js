@@ -9,6 +9,11 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
+// Add a root endpoint for testing
+app.get('/', (req, res) => {
+    res.json({ status: 'Server is running', endpoints: ['/generate-card'] });
+});
+
 app.post('/generate-card', async (req, res) => {
     try {
         const { description } = req.body;
