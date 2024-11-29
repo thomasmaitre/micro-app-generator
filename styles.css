@@ -207,6 +207,11 @@ button:active {
     transform: translateY(0);
 }
 
+button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
 #microApp {
     min-height: 400px;
     border-radius: 8px;
@@ -628,6 +633,16 @@ input[type="color"]::-webkit-color-swatch {
     to {
         transform: rotate(360deg);
     }
+}
+
+.fa-spinner {
+    margin-right: 8px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .error-message {

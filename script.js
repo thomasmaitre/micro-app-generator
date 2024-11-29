@@ -215,22 +215,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
+            // Show loading state
             generateBtn.disabled = true;
-            generateBtn.textContent = 'Generating...';
+            generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
             
             const card = await generateCardFromDescription(description);
             currentCard = card;
             renderCard(card);
         } catch (error) {
             console.error('Error generating card:', error);
+            let errorMessage = 'Error generating card. Please try again.';
+            
             if (error.message.includes('temporarily busy') || error.message.includes('rate limit')) {
-                alert('The service is temporarily busy. Please try again in a few moments.');
-            } else {
-                alert('Error generating card. Please try again.');
+                errorMessage = 'The service is temporarily busy. Please try again in a few moments.';
+            } else if (error.message.includes('API key')) {
+                errorMessage = 'Server configuration error. Please contact support.';
+            } else if (error.message.includes('parse')) {
+                errorMessage = 'Error processing AI response. Please try again with a different description.';
             }
+            
+            alert(errorMessage);
         } finally {
+            // Reset button state
             generateBtn.disabled = false;
-            generateBtn.textContent = 'Generate Card';
+            generateBtn.innerHTML = 'Generate Card';
         }
     });
 
@@ -330,11 +338,12 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Response data:', responseData);
 
             if (!response.ok) {
-                throw new Error(responseData.error || 'Failed to generate card');
+                throw new Error(responseData.error || responseData.details || 'Failed to generate card');
             }
 
             // Validate that the response is a valid Adaptive Card
             if (!responseData.type || responseData.type !== 'AdaptiveCard') {
+                console.error('Invalid card format:', responseData);
                 throw new Error('Invalid Adaptive Card format');
             }
 
