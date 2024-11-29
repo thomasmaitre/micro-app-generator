@@ -311,23 +311,32 @@ document.addEventListener('DOMContentLoaded', () => {
     async function generateCardFromDescription(description) {
         try {
             const API_URL = 'https://web-production-72b3.up.railway.app';
+            console.log('Making request to:', `${API_URL}/generate-card`);
+            
             const response = await fetch(`${API_URL}/generate-card`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
                 body: JSON.stringify({ description })
             });
 
+            console.log('Response status:', response.status);
+            const responseData = await response.json();
+            console.log('Response data:', responseData);
+
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to generate card');
+                throw new Error(responseData.error || 'Failed to generate card');
             }
 
-            const cardJson = await response.json();
-            return cardJson;
+            return responseData;
         } catch (error) {
-            console.error('Error details:', error);
+            console.error('Detailed error:', {
+                message: error.message,
+                stack: error.stack,
+                response: error.response
+            });
             throw error;
         }
     }
