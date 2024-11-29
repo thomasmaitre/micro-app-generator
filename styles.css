@@ -1,40 +1,42 @@
 :root[data-theme="light"] {
     --bg-primary: #ffffff;
-    --bg-secondary: #f8f9fa;
-    --text-primary: #111111;
+    --bg-secondary: #f6f6f7;
+    --text-primary: #2c2f33;
     --text-secondary: #666666;
-    --border-color: #E5E7EB;
+    --border-color: #e3e5e8;
     --input-bg: #ffffff;
-    --button-bg: #111111;
+    --input-text: #2c2f33;
+    --button-bg: #5865f2;
     --button-text: #ffffff;
-    --hover-bg: #f0f2f5;
-    --card-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --hover-bg: #4752c4;
+    --card-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 :root[data-theme="dark"] {
-    --bg-primary: #1a1b1e;
-    --bg-secondary: #25262b;
+    --bg-primary: #2c2f33;
+    --bg-secondary: #23272a;
     --text-primary: #ffffff;
     --text-secondary: #a1a1aa;
-    --border-color: #2e2e35;
-    --input-bg: #ffffff;
-    --button-bg: #ffffff;
+    --border-color: #4a4d52;
+    --input-bg: #1e2124;
+    --input-text: #ffffff;
+    --button-bg: #7289da;
     --button-text: #ffffff;
-    --hover-bg: #2c2d32;
-    --card-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    --hover-bg: #677bc4;
+    --card-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'League Spartan', sans-serif;
 }
 
 body {
     margin: 0;
     padding: 20px;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'League Spartan', sans-serif;
     background-color: var(--bg-primary);
     color: var(--text-primary);
     transition: background-color 0.3s, color 0.3s;
@@ -108,10 +110,19 @@ body {
     transition: background-color 0.3s, box-shadow 0.3s;
 }
 
+h1 {
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    font-family: 'League Spartan', sans-serif;
+}
+
 h2 {
     color: var(--text-primary);
     margin: 0;
     font-weight: 600;
+    font-family: 'League Spartan', sans-serif;
 }
 
 label {
@@ -119,6 +130,7 @@ label {
     margin-bottom: 8px;
     color: var(--text-secondary);
     font-weight: 500;
+    font-family: 'League Spartan', sans-serif;
 }
 
 input[type="text"],
@@ -129,20 +141,49 @@ textarea {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     background-color: var(--input-bg);
-    color: var(--text-primary);
+    color: var(--input-text);
     transition: border-color 0.3s, background-color 0.3s;
+    font-family: 'League Spartan', sans-serif;
 }
 
 input[type="text"]:focus,
 input[type="password"]:focus,
 textarea:focus {
-    outline: none;
     border-color: var(--button-bg);
+    outline: none;
+}
+
+input[type="text"]::placeholder,
+input[type="password"]::placeholder,
+textarea::placeholder {
+    color: var(--text-secondary);
 }
 
 textarea {
     height: 150px;
     resize: vertical;
+    font-family: 'League Spartan', sans-serif;
+}
+
+textarea#appDescription {
+    width: 100%;
+    min-height: 150px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--input-bg);
+    color: var(--input-text);
+    resize: vertical;
+    transition: border-color 0.3s, background-color 0.3s;
+}
+
+textarea#appDescription:focus {
+    border-color: var(--button-bg);
+    outline: none;
+}
+
+textarea#appDescription::placeholder {
+    color: var(--text-secondary);
 }
 
 button {
@@ -154,6 +195,7 @@ button {
     cursor: pointer;
     font-weight: 500;
     transition: transform 0.2s, opacity 0.2s;
+    font-family: 'League Spartan', sans-serif;
 }
 
 button:hover {
@@ -186,13 +228,14 @@ button:active {
     border-radius: 12px !important;
     transition: all 0.3s ease-in-out !important;
     background-color: #ffffff !important;
+    font-family: 'League Spartan', sans-serif;
 }
 
 /* Typography */
 .ac-textBlock {
     line-height: 1.4 !important;
     margin-bottom: 2px !important;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    font-family: 'League Spartan', sans-serif !important;
 }
 
 /* Input fields */
@@ -208,8 +251,8 @@ button {
     font-size: 14px !important;
     transition: all 0.2s !important;
     background-color: var(--input-bg) !important;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-    color: var(--text-primary) !important;
+    font-family: 'League Spartan', sans-serif !important;
+    color: var(--input-text) !important;
 }
 
 .ac-input:hover {
@@ -239,6 +282,7 @@ button {
     transition: all 0.2s !important;
     text-transform: none !important;
     min-width: 120px !important;
+    font-family: 'League Spartan', sans-serif !important;
 }
 
 .ac-pushButton:hover {
@@ -278,11 +322,13 @@ button {
     color: var(--text-secondary) !important;
     font-size: 14px !important;
     font-weight: 500 !important;
+    font-family: 'League Spartan', sans-serif !important;
 }
 
 .ac-fact-value {
     font-size: 14px !important;
     color: var(--text-primary) !important;
+    font-family: 'League Spartan', sans-serif !important;
 }
 
 /* ColumnSet */
@@ -331,7 +377,7 @@ button {
 [data-theme="dark"] .ac-input {
     background-color: var(--input-bg) !important;
     border-color: var(--border-color) !important;
-    color: var(--text-primary) !important;
+    color: var(--input-text) !important;
 }
 
 [data-theme="dark"] .ac-input:hover {
@@ -381,7 +427,8 @@ button {
     border-radius: 4px;
     font-size: 14px;
     background-color: var(--input-bg);
-    color: var(--text-primary);
+    color: var(--input-text);
+    font-family: 'League Spartan', sans-serif;
 }
 
 #appDescription {
@@ -393,7 +440,8 @@ button {
     resize: vertical;
     font-size: 14px;
     background-color: var(--input-bg);
-    color: var(--text-primary);
+    color: var(--input-text);
+    font-family: 'League Spartan', sans-serif;
 }
 
 .color-picker {
@@ -406,6 +454,7 @@ button {
     font-size: 14px;
     font-weight: 500;
     color: var(--text-secondary);
+    font-family: 'League Spartan', sans-serif;
 }
 
 .color-input-wrapper {
@@ -442,8 +491,8 @@ input[type="color"]::-webkit-color-swatch {
     border: 2px solid var(--border-color);
     border-radius: 10px;
     background-color: var(--input-bg);
-    color: var(--text-primary);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--input-text);
+    font-family: 'League Spartan', sans-serif;
     font-size: 14px;
     display: flex;
     align-items: center;
@@ -464,6 +513,7 @@ input[type="color"]::-webkit-color-swatch {
     font-size: 14px;
     font-weight: 500;
     color: var(--text-secondary);
+    font-family: 'League Spartan', sans-serif;
 }
 
 .drop-zone {
@@ -521,6 +571,7 @@ input[type="color"]::-webkit-color-swatch {
     font-weight: 500;
     color: var(--text-secondary);
     transition: color 0.2s ease;
+    font-family: 'League Spartan', sans-serif;
 }
 
 .drop-zone:hover .drop-zone__text {
@@ -587,6 +638,7 @@ input[type="color"]::-webkit-color-swatch {
     color: #c00;
     text-align: center;
     line-height: 1.5;
+    font-family: 'League Spartan', sans-serif;
 }
 
 .url-display {
@@ -614,11 +666,13 @@ input[type="color"]::-webkit-color-swatch {
 .url-display h3 {
     margin: 0 0 16px;
     color: var(--text-primary);
+    font-family: 'League Spartan', sans-serif;
 }
 
 .url-display p {
     margin: 0 0 8px;
     color: var(--text-secondary);
+    font-family: 'League Spartan', sans-serif;
 }
 
 .url-display input {
@@ -628,7 +682,8 @@ input[type="color"]::-webkit-color-swatch {
     border: 1px solid var(--border-color);
     border-radius: 4px;
     background: var(--input-bg);
-    color: var(--text-primary);
+    color: var(--input-text);
+    font-family: 'League Spartan', sans-serif;
 }
 
 .url-display button {
@@ -639,8 +694,13 @@ input[type="color"]::-webkit-color-swatch {
     border-radius: 2px;
     margin-right: 8px;
     cursor: pointer;
+    font-family: 'League Spartan', sans-serif;
 }
 
 .url-display button:hover {
     opacity: 0.9;
+}
+
+.theme-switch-wrapper .fa-moon {
+    color: var(--text-color);
 }

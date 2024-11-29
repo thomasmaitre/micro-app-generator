@@ -310,8 +310,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Function to generate card from description
     async function generateCardFromDescription(description) {
         try {
-            const API_URL = 'https://web-production-72b3.up.railway.app';
+            // Use localhost for local development, production URL for deployed version
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const API_URL = isLocalhost ? 'http://localhost:3000' : 'https://web-production-72b3.up.railway.app';
             console.log('Making request to:', `${API_URL}/generate-card`);
+            console.log('Description:', description);
             
             const response = await fetch(`${API_URL}/generate-card`, {
                 method: 'POST',
@@ -330,6 +333,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(responseData.error || 'Failed to generate card');
             }
 
+            // Validate that the response is a valid Adaptive Card
+            if (!responseData.type || responseData.type !== 'AdaptiveCard') {
+                throw new Error('Invalid Adaptive Card format');
+            }
+
             return responseData;
         } catch (error) {
             console.error('Detailed error:', {
@@ -344,14 +352,44 @@ document.addEventListener('DOMContentLoaded', () => {
     // Function to render card
     function renderCard(cardJson) {
         try {
-            adaptiveCardContainer.innerHTML = '';
+            console.log('Rendering card with JSON:', cardJson);
+            
+            // Create an AdaptiveCard instance
             const adaptiveCard = new AdaptiveCards.AdaptiveCard();
+            
+            // Set host config
+            adaptiveCard.hostConfig = new AdaptiveCards.HostConfig({
+                fontFamily: "League Spartan, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                spacing: {
+                    small: 3,
+                    default: 8,
+                    medium: 20,
+                    large: 30,
+                    extraLarge: 40,
+                    padding: 10
+                },
+                separator: {
+                    lineThickness: 1,
+                    lineColor: "#EEEEEE"
+                }
+            });
+
+            // Parse the card payload
             adaptiveCard.parse(cardJson);
+            
+            // Clear the existing card
+            adaptiveCardContainer.innerHTML = '';
+            
+            // Render the card
             const renderedCard = adaptiveCard.render();
+            
+            // Add the card to the container
             adaptiveCardContainer.appendChild(renderedCard);
+            
+            console.log('Card rendered successfully');
         } catch (error) {
             console.error('Error rendering card:', error);
-            alert('Error rendering card. Please try again.');
+            throw new Error('Failed to render card: ' + error.message);
         }
     }
 });
