@@ -305,43 +305,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Function to generate card from description
     async function generateCardFromDescription(description) {
-        const apiKey = apiKeyInput.value.trim();
-        
-        if (!apiKey) {
-            throw new Error('Please enter your OpenAI API key');
-        }
-
         try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            const response = await fetch('http://localhost:3000/generate-card', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    model: "gpt-3.5-turbo",
-                    messages: [
-                        {
-                            role: "system",
-                            content: "You are a helpful assistant that generates Adaptive Cards JSON. Create visually appealing cards that follow best practices for layout and design."
-                        },
-                        {
-                            role: "user",
-                            content: `Create an Adaptive Card JSON for: ${description}. Make it visually appealing and functional. Add structure input fields, buttons, and other interactive elements to make it user-friendly. If the card is a list, make the elements visually distinct and easy to navigate.`
-                        }
-                    ],
-                    temperature: 0.7
-                })
+                body: JSON.stringify({ description })
             });
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                console.error('API Error:', errorData);
-                throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to generate card');
             }
 
-            const data = await response.json();
-            const cardJson = JSON.parse(data.choices[0].message.content);
+            const cardJson = await response.json();
             return cardJson;
         } catch (error) {
             console.error('Error details:', error);
