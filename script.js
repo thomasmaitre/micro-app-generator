@@ -93,18 +93,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Apply host config
     adaptiveCard.hostConfig = new AdaptiveCards.HostConfig(hostConfig);
 
-    // Initialize theme from localStorage or system preference
-    const savedTheme = localStorage.getItem('theme');
-    const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const initialTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
-    
-    // Set initial theme
-    htmlElement.setAttribute('data-theme', initialTheme);
-    themeToggle.checked = initialTheme === 'dark';
+    // Theme toggle functionality
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    htmlElement.setAttribute('data-theme', savedTheme);
+    updateThemeStyles(savedTheme);
 
-    // Theme toggle handler
-    themeToggle.addEventListener('change', () => {
-        const newTheme = themeToggle.checked ? 'dark' : 'light';
+    themeToggle.addEventListener('click', () => {
+        const currentTheme = htmlElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
         htmlElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
         updateThemeStyles(newTheme);
