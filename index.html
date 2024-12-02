@@ -20,54 +20,47 @@
     </script>
 </head>
 <body>
+    <nav class="main-navigation">
+        <div class="nav-logo">
+            <img src="https://res.cloudinary.com/vizir2/image/upload/v1732533463/Companion-icon_rw3nk3.png" alt="Logo" class="logo">
+            <span class="nav-title">Lumapps Micro-apps</span>
+        </div>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link active">Generator</a>
+            <a href="gallery.html" class="nav-link">Gallery</a>
+        </div>
+    </nav>
+
     <div class="container">
         <div class="left-panel">
             <div class="panel-header">
                 <h1>Micro-app Generator</h1>
-                <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">
-                    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="5"/>
-                        <line x1="12" y1="1" x2="12" y2="3"/>
-                        <line x1="12" y1="21" x2="12" y2="23"/>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                        <line x1="1" y1="12" x2="3" y2="12"/>
-                        <line x1="21" y1="12" x2="23" y2="12"/>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                    </svg>
-                    <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                    </svg>
-                </button>
             </div>
             <textarea id="appDescription" placeholder="Describe your micro-app (e.g., 'A contact form with name, email, and message fields')"></textarea>
             <button id="generateBtn">Generate Card</button>
             
-            <div class="color-picker">
-                <label for="backgroundColor">Background Color:</label>
-                <div class="color-input-wrapper">
+            <div class="form-group">
+                <label for="backgroundColor">Background Color</label>
+                <div class="color-input-container">
                     <input type="color" id="backgroundColor" value="#ffffff">
-                    <div class="color-preview" id="colorPreview">#ffffff</div>
+                    <span id="colorPreview">#FFFFFF</span>
                 </div>
             </div>
             
-            <div class="background-image">
-                <label for="backgroundImage">Background Image:</label>
-                <div class="drop-zone" id="dropZone">
-                    <input type="file" id="backgroundImage" accept="image/*" class="drop-zone__input">
-                    <div class="drop-zone__content">
-                        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="17 8 12 3 7 8"/>
-                            <line x1="12" y1="3" x2="12" y2="15"/>
-                        </svg>
-                        <span class="drop-zone__text">Drag image here or click to upload</span>
-                    </div>
-                </div>
+            <div class="actions-group">
+                <button id="downloadBtn" class="action-button">
+                    <i class="fas fa-download"></i>
+                    Download as PNG
+                </button>
+                <button id="shareBtn" class="action-button">
+                    <i class="fas fa-link"></i>
+                    Get Shareable Link
+                </button>
+                <button id="publishBtn" class="action-button">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    Publish to Gallery
+                </button>
             </div>
-            
-            <button id="downloadBtn">Download as PNG</button>
         </div>
         
         <div class="right-panel" id="appPreview">

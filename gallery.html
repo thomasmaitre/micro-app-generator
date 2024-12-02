@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Micro-App Gallery</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="main-navigation">
+        <div class="nav-logo">
+            <img src="https://res.cloudinary.com/vizir2/image/upload/v1732533463/Companion-icon_rw3nk3.png" alt="Logo" class="logo">
+            <span class="nav-title">Lumapps Micro-apps</span>
+        </div>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">Create Micro-App</a>
+            <a href="gallery.html" class="nav-link active">Gallery</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <main>
+            <div id="loading" class="loading-message">Loading gallery...</div>
+            <div id="gallery" class="gallery-grid"></div>
+        </main>
+    </div>
+
+    <script src="gallery.js"></script>
+</body>
+</html>

@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiKeyInput = document.getElementById('apiKeyInput');
     const generateBtn = document.getElementById('generateBtn');
     const backgroundColor = document.getElementById('backgroundColor');
-    const backgroundImage = document.getElementById('backgroundImage');
     const downloadBtn = document.getElementById('downloadBtn');
     const microApp = document.getElementById('microApp');
     const appPreview = document.getElementById('appPreview');
@@ -18,7 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeToggle = document.getElementById('themeToggle');
     const htmlElement = document.documentElement;
     const colorPreview = document.getElementById('colorPreview');
-    const dropZone = document.getElementById('dropZone');
+    const errorDisplay = document.getElementById('errorDisplay');
+    const shareBtn = document.getElementById('shareBtn');
+    const publishBtn = document.getElementById('publishBtn');
 
     // Initialize AdaptiveCards
     let adaptiveCard = new AdaptiveCards.AdaptiveCard();
@@ -93,80 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Apply host config
     adaptiveCard.hostConfig = new AdaptiveCards.HostConfig(hostConfig);
 
-    // Theme toggle functionality
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    htmlElement.setAttribute('data-theme', savedTheme);
-    updateThemeStyles(savedTheme);
-
-    themeToggle.addEventListener('click', () => {
-        const currentTheme = htmlElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-        htmlElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-        updateThemeStyles(newTheme);
-    });
-
-    // Listen for system theme changes
-    if (window.matchMedia) {
-        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
-            if (!localStorage.getItem('theme')) {
-                const newTheme = e.matches ? 'dark' : 'light';
-                htmlElement.setAttribute('data-theme', newTheme);
-                themeToggle.checked = e.matches;
-                updateThemeStyles(newTheme);
-            }
-        });
-    }
-
-    function updateThemeStyles(theme) {
-        if (!microApp.style.backgroundImage || microApp.style.backgroundImage === 'none') {
-            microApp.style.backgroundColor = theme === 'dark' ? '#25262b' : '#ffffff';
-        }
-
-        const updatedConfig = {
-            ...hostConfig,
-            containerStyles: {
-                ...hostConfig.containerStyles,
-                default: {
-                    foregroundColors: {
-                        default: {
-                            default: theme === 'dark' ? "#FFFFFF" : "#000000",
-                            subtle: "#767676"
-                        }
-                    },
-                    backgroundColor: "#FFFFFF"
-                }
-            },
-            inputs: {
-                ...hostConfig.inputs,
-                backgroundColor: "#FFFFFF",
-                borderColor: theme === 'dark' ? "#666666" : "#DDDDDD"
-            },
-            actions: {
-                ...hostConfig.actions,
-                actions: {
-                    default: {
-                        backgroundColor: theme === 'dark' ? "#FFFFFF" : "#111111",
-                        textColor: theme === 'dark' ? "#111111" : "#FFFFFF",
-                        borderRadius: "2px",
-                        borderColor: "transparent",
-                        padding: "8px 16px",
-                        fontSize: "14px",
-                        fontWeight: "500",
-                        hover: {
-                            backgroundColor: theme === 'dark' ? "#EEEEEE" : "#333333"
-                        }
-                    }
-                }
-            }
-        };
-
-        adaptiveCard.hostConfig = new AdaptiveCards.HostConfig(updatedConfig);
-        if (currentCard) {
-            renderCard(currentCard);
-        }
-    }
-
     // Background color handler
     backgroundColor.addEventListener('input', (e) => {
         const color = e.target.value;
@@ -176,46 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize color preview
     colorPreview.textContent = backgroundColor.value.toUpperCase();
-
-    // Drag and drop functionality
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
-    });
-
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-over'), false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-over'), false);
-    });
-
-    dropZone.addEventListener('drop', handleDrop, false);
-    backgroundImage.addEventListener('change', (e) => handleFiles(e.target.files));
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    function handleDrop(e) {
-        const files = e.dataTransfer.files;
-        handleFiles(files);
-    }
-
-    function handleFiles(files) {
-        if (files.length > 0 && files[0].type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                microApp.style.backgroundImage = `url(${e.target.result})`;
-                microApp.style.backgroundSize = 'cover';
-                microApp.style.backgroundPosition = 'center';
-                dropZone.classList.add('has-image');
-                dropZone.querySelector('.drop-zone__text').textContent = files[0].name;
-            };
-            reader.readAsDataURL(files[0]);
-        }
-    }
 
     // Generate button handler
     generateBtn.addEventListener('click', async () => {
@@ -255,7 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Function to generate card from description
     async function generateCardFromDescription(description) {
         try {
             const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -287,77 +173,217 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function generateCard() {
+        const description = appDescription.value.trim();
+        
+        if (!description) {
+            showError('Please enter a description for your micro-app.');
+            return;
+        }
+
+        generateBtn.disabled = true;
+        showLoading(true);
+        hideError();
+
+        try {
+            const response = await fetch('https://web-production-72b3.up.railway.app/generate-card', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ description })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                let errorMessage = data.error || 'Error generating card';
+                let retryDelay = 3000; // Default 3 seconds
+
+                if (response.status === 429) {
+                    // Rate limit error
+                    if (data.retryAfter) {
+                        const minutes = Math.ceil(data.retryAfter / 60);
+                        errorMessage = `Rate limit exceeded. Please try again in ${minutes} minutes.`;
+                        retryDelay = data.retryAfter * 1000;
+                    } else {
+                        errorMessage = 'Too many requests. Please try again in a few seconds.';
+                    }
+                    
+                    // Disable button temporarily
+                    generateBtn.disabled = true;
+                    setTimeout(() => {
+                        generateBtn.disabled = false;
+                    }, retryDelay);
+                }
+
+                throw new Error(errorMessage);
+            }
+
+            // Clear any previous errors
+            hideError();
+            
+            // Render the card
+            adaptiveCard.parse(data);
+            const renderedCard = adaptiveCard.render();
+            
+            const cardContainer = adaptiveCardContainer;
+            cardContainer.innerHTML = '';
+            cardContainer.appendChild(renderedCard);
+            
+            // Enable download after successful generation
+            enableDownload();
+            
+        } catch (error) {
+            console.error('Error:', error);
+            showError(error.message);
+        } finally {
+            showLoading(false);
+            if (!generateBtn.dataset.rateLimited) {
+                generateBtn.disabled = false;
+            }
+        }
+    }
+
+    function showError(message) {
+        errorDisplay.textContent = message;
+        errorDisplay.style.display = 'block';
+        
+        // Auto-hide error after 5 seconds unless it's a rate limit error
+        if (!message.includes('rate limit')) {
+            setTimeout(() => {
+                errorDisplay.style.display = 'none';
+            }, 5000);
+        }
+    }
+
+    function hideError() {
+        errorDisplay.style.display = 'none';
+    }
+
+    function showLoading(show) {
+        if (show) {
+            generateBtn.innerHTML = '<span class="spinner"></span> Generating...';
+        } else {
+            generateBtn.textContent = 'Generate Card';
+        }
+    }
+
     // Download functionality
-    downloadBtn.addEventListener('click', function() {
-        const microAppElement = document.getElementById('microApp');
-        const options = {
-            quality: 1.0,
-            bgcolor: microAppElement.style.backgroundColor || '#ffffff',
-            style: {
-                transform: 'none'
-            },
-            scale: 2  // Improve quality with 2x scaling
-        };
+    async function downloadAsPNG() {
+        try {
+            const card = document.querySelector('#microApp');
+            const cardTitle = document.querySelector('#appDescription').value.split('\n')[0] || 'Untitled Micro-App';
+            const cardDescription = document.querySelector('#appDescription').value || 'No description provided';
+            
+            // Generate PNG
+            const dataUrl = await domtoimage.toPng(card, {
+                quality: 1.0,
+                bgcolor: card.style.backgroundColor || '#ffffff',
+                style: {
+                    transform: 'none'
+                },
+                scale: 2
+            });
+            
+            // Convert data URL to Blob
+            const response = await fetch(dataUrl);
+            const blob = await response.blob();
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('image', blob, 'card.png');
+            formData.append('title', cardTitle);
+            formData.append('description', cardDescription);
+            formData.append('cardData', JSON.stringify(currentCard));
+            
+            // Save to backend
+            const saveResponse = await fetch('https://web-production-72b3.up.railway.app/save-micro-app', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!saveResponse.ok) {
+                throw new Error('Failed to save micro-app');
+            }
+            
+            // Download PNG
+            const link = document.createElement('a');
+            link.download = 'micro-app.png';
+            link.href = dataUrl;
+            link.click();
+            
+            showMessage('Micro-app saved and downloaded successfully!', 'success');
+        } catch (error) {
+            console.error('Error:', error);
+            showMessage('Failed to process image. Please try again.', 'error');
+        }
+    }
 
-        downloadBtn.disabled = true;
-        downloadBtn.textContent = 'Processing...';
+    function showMessage(message, type) {
+        const messageElement = document.createElement('div');
+        messageElement.textContent = message;
+        messageElement.className = `message ${type}`;
+        document.body.appendChild(messageElement);
+        setTimeout(() => {
+            messageElement.remove();
+        }, 3000);
+    }
 
-        domtoimage.toPng(microAppElement, options)
-            .then(function(dataUrl) {
-                // Download the image
+    downloadBtn.addEventListener('click', downloadAsPNG);
+
+    // Download as PNG
+    downloadBtn.addEventListener('click', () => {
+        domtoimage.toPng(document.getElementById('microApp'))
+            .then((dataUrl) => {
                 const link = document.createElement('a');
-                link.download = 'adaptive-card.png';
+                link.download = 'micro-app.png';
                 link.href = dataUrl;
                 link.click();
-
-                // Convert to blob for upload
-                fetch(dataUrl)
-                    .then(res => res.blob())
-                    .then(blob => {
-                        // Upload to ImgBB
-                        const formData = new FormData();
-                        formData.append('image', blob, 'adaptive-card.png');
-                        
-                        return fetch('https://api.imgbb.com/1/upload?key=1242fb32ef495dd0e14891ef8ccbb326', {
-                            method: 'POST',
-                            body: formData
-                        });
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            const publicUrl = data.data.url;
-                            const displayUrl = document.createElement('div');
-                            displayUrl.className = 'url-display';
-                            displayUrl.innerHTML = `
-                                <div class="modal">
-                                    <h3>Image Hosted Successfully!</h3>
-                                    <p>Public URL:</p>
-                                    <input type="text" value="${publicUrl}" readonly onclick="this.select()">
-                                    <button onclick="navigator.clipboard.writeText('${publicUrl}').then(() => alert('URL copied!'))">
-                                        Copy URL
-                                    </button>
-                                    <button onclick="this.closest('.url-display').remove()">Close</button>
-                                </div>
-                            `;
-                            document.body.appendChild(displayUrl);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error uploading to ImgBB:', error);
-                        alert('Image downloaded but hosting failed');
-                    })
-                    .finally(() => {
-                        downloadBtn.disabled = false;
-                        downloadBtn.textContent = 'Download & Host';
-                    });
             })
-            .catch(function(error) {
-                console.error('Error generating image:', error);
-                alert('Failed to generate image');
-                downloadBtn.disabled = false;
-                downloadBtn.textContent = 'Download & Host';
+            .catch((error) => {
+                console.error('Error generating PNG:', error);
             });
+    });
+
+    // Get Shareable Link
+    shareBtn.addEventListener('click', async () => {
+        try {
+            const dataUrl = await domtoimage.toPng(document.getElementById('microApp'));
+            const response = await fetch('http://localhost:3000/upload-image', {
+                method: 'POST',
+                body: JSON.stringify({ imageData: dataUrl.split(',')[1] }),
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('Shareable link: ' + result.data.url);
+            } else {
+                alert('Failed to get shareable link.');
+            }
+        } catch (error) {
+            console.error('Error getting shareable link:', error);
+        }
+    });
+
+    // Publish to Gallery
+    publishBtn.addEventListener('click', async () => {
+        try {
+            const dataUrl = await domtoimage.toPng(document.getElementById('microApp'));
+            const response = await fetch('http://localhost:3000/api/publish', {
+                method: 'POST',
+                body: JSON.stringify({ image: dataUrl.split(',')[1] }),
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('Micro-app published to gallery!');
+            } else {
+                alert('Failed to publish micro-app.');
+            }
+        } catch (error) {
+            console.error('Error publishing to gallery:', error);
+        }
     });
 
     // Function to render card
