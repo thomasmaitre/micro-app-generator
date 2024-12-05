@@ -272,65 +272,214 @@ document.addEventListener('DOMContentLoaded', () => {
     // Download functionality
     async function downloadAsPNG() {
         try {
-            const card = document.querySelector('#microApp');
-            const cardTitle = document.querySelector('#appDescription').value.split('\n')[0] || 'Untitled Micro-App';
-            const cardDescription = document.querySelector('#appDescription').value || 'No description provided';
-            
-            // Generate PNG
-            const dataUrl = await domtoimage.toPng(card, {
-                quality: 1.0,
-                bgcolor: card.style.backgroundColor || '#ffffff',
-                style: {
-                    transform: 'none'
-                },
-                scale: 2
-            });
-            
-            // Convert data URL to Blob
-            const response = await fetch(dataUrl);
-            const blob = await response.blob();
-            
-            // Create form data
-            const formData = new FormData();
-            formData.append('image', blob, 'card.png');
-            formData.append('title', cardTitle);
-            formData.append('description', cardDescription);
-            formData.append('cardData', JSON.stringify(currentCard));
-            
-            // Save to backend
-            const saveResponse = await fetch('https://web-production-72b3.up.railway.app/save-micro-app', {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (!saveResponse.ok) {
-                throw new Error('Failed to save micro-app');
-            }
-            
-            // Download PNG
+            showMessage('Generating PNG...', 'info');
+            const dataUrl = await domtoimage.toPng(microApp);
             const link = document.createElement('a');
             link.download = 'micro-app.png';
             link.href = dataUrl;
             link.click();
-            
-            showMessage('Micro-app saved and downloaded successfully!', 'success');
+            showMessage('PNG downloaded successfully! ', 'success');
         } catch (error) {
-            console.error('Error:', error);
-            showMessage('Failed to process image. Please try again.', 'error');
+            console.error('Error generating PNG:', error);
+            showMessage('Failed to generate PNG', 'error');
         }
     }
 
-    function showMessage(message, type) {
-        const messageElement = document.createElement('div');
-        messageElement.textContent = message;
-        messageElement.className = `message ${type}`;
-        document.body.appendChild(messageElement);
-        setTimeout(() => {
-            messageElement.remove();
-        }, 3000);
+    // Get shareable link functionality
+    async function getShareableLink() {
+        try {
+            showMessage('Generating shareable link...', 'info');
+            const dataUrl = await domtoimage.toPng(microApp);
+            const base64Data = dataUrl.split(',')[1];
+
+            const response = await fetch('http://localhost:3000/upload-image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ imageData: base64Data })
+            });
+
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to upload image');
+            }
+            
+            if (result.success) {
+                // Create and show modal
+                const modal = document.createElement('div');
+                modal.className = 'modal link-modal';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <span class="close">&times;</span>
+                        <h2>Shareable Link</h2>
+                        <div class="url-container">
+                            <input type="text" value="${result.data.url}" readonly>
+                            <button id="copyLinkBtn">
+                                <i class="fas fa-copy"></i>
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                const closeBtn = modal.querySelector('.close');
+                const copyBtn = modal.querySelector('#copyLinkBtn');
+                const input = modal.querySelector('input');
+                
+                // Close button handler
+                closeBtn.onclick = () => {
+                    document.body.removeChild(modal);
+                };
+                
+                // Copy button handler
+                copyBtn.onclick = async () => {
+                    try {
+                        await navigator.clipboard.writeText(result.data.url);
+                        showMessage('Link copied to clipboard! ', 'success');
+                        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                        setTimeout(() => {
+                            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                        }, 2000);
+                    } catch (err) {
+                        // Fallback for older browsers
+                        input.select();
+                        document.execCommand('copy');
+                        showMessage('Link copied to clipboard! ', 'success');
+                    }
+                };
+                
+                // Click outside to close
+                modal.onclick = (event) => {
+                    if (event.target === modal) {
+                        document.body.removeChild(modal);
+                    }
+                };
+                
+                modal.style.display = 'flex';
+                input.select(); // Select the URL for easy copying
+                showMessage('Link generated successfully! ', 'success');
+            } else {
+                throw new Error(result.error || 'Failed to generate link');
+            }
+        } catch (error) {
+            console.error('Error getting shareable link:', error);
+            showMessage(error.message || 'Failed to generate shareable link', 'error');
+        }
     }
 
+    // Publish to gallery functionality
+    async function publishToGallery() {
+        try {
+            showMessage('Publishing to gallery...', 'info');
+            const dataUrl = await domtoimage.toPng(microApp);
+            const base64Data = dataUrl.split(',')[1];
+
+            const response = await fetch('http://localhost:3000/api/publish', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    imageData: base64Data,
+                    description: appDescription.value
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                showMessage('Published to gallery successfully! ', 'success');
+            } else {
+                throw new Error(result.error || 'Failed to publish to gallery');
+            }
+        } catch (error) {
+            console.error('Error publishing to gallery:', error);
+            showMessage(error.message || 'Failed to publish to gallery', 'error');
+        }
+    }
+
+    // Get JSON functionality
+    function getCardJSON() {
+        if (!currentCard) {
+            showMessage('No card generated yet', 'error');
+            return;
+        }
+
+        const jsonContent = document.getElementById('jsonContent');
+        jsonContent.textContent = JSON.stringify(currentCard, null, 2);
+        jsonModal.style.display = 'flex';
+
+        const closeBtn = jsonModal.querySelector('.close');
+        const copyBtn = jsonModal.querySelector('#copyJsonBtn');
+        
+        closeBtn.onclick = () => {
+            jsonModal.style.display = 'none';
+        };
+        
+        copyBtn.onclick = () => {
+            try {
+                navigator.clipboard.writeText(JSON.stringify(currentCard, null, 2))
+                    .then(() => {
+                        showMessage('JSON copied to clipboard! ', 'success');
+                    })
+                    .catch(() => {
+                        // Fallback for older browsers
+                        const tempTextArea = document.createElement('textarea');
+                        tempTextArea.value = JSON.stringify(currentCard, null, 2);
+                        document.body.appendChild(tempTextArea);
+                        tempTextArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(tempTextArea);
+                        showMessage('JSON copied to clipboard! ', 'success');
+                    });
+            } catch (error) {
+                console.error('Error copying to clipboard:', error);
+                showMessage('Failed to copy JSON', 'error');
+            }
+        };
+    }
+
+    // Create JSON Modal
+    const jsonModal = document.createElement('div');
+    jsonModal.className = 'modal';
+    jsonModal.style.display = 'none';
+    jsonModal.innerHTML = `
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Card JSON</h2>
+            <pre id="jsonContent"></pre>
+            <div class="modal-footer">
+                <button id="copyJsonBtn">
+                    <i class="fas fa-copy"></i>
+                    Copy to Clipboard
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(jsonModal);
+
+    // Get JSON button functionality
+    const getJsonBtn = document.createElement('button');
+    getJsonBtn.id = 'getJsonBtn';
+    getJsonBtn.className = 'action-button';
+    getJsonBtn.innerHTML = '<i class="fas fa-code"></i> Get Card JSON';
+    document.querySelector('.actions-group').appendChild(getJsonBtn);
+
+    // Add event listeners
     downloadBtn.addEventListener('click', downloadAsPNG);
+    shareBtn.addEventListener('click', getShareableLink);
+    publishBtn.addEventListener('click', publishToGallery);
+    getJsonBtn.addEventListener('click', getCardJSON);
+
+    // Close modal when clicking outside
+    window.onclick = (event) => {
+        if (event.target.className === 'modal') {
+            event.target.style.display = 'none';
+        }
+    };
 
     // Download as PNG
     downloadBtn.addEventListener('click', () => {
@@ -428,5 +577,15 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error rendering card:', error);
             throw new Error('Failed to render card: ' + error.message);
         }
+    }
+
+    function showMessage(message, type) {
+        const messageElement = document.createElement('div');
+        messageElement.textContent = message;
+        messageElement.className = `message ${type}`;
+        document.body.appendChild(messageElement);
+        setTimeout(() => {
+            messageElement.remove();
+        }, 3000);
     }
 });
