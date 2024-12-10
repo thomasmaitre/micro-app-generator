@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 const FormData = require('form-data');
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 
 const app = express();
 app.use(cors());
@@ -13,16 +13,52 @@ const PORT = process.env.PORT || 3000;
 
 // MongoDB connection URI and database name
 const uri = process.env.MONGODB_URI;
+console.log('MongoDB URI:', uri ? 'URI is set' : 'URI is not set');
+
+if (!uri) {
+    console.error('MONGODB_URI environment variable is not set!');
+    process.exit(1);
+}
+
 const dbName = 'microAppGallery';
 
 // Connect to MongoDB
 let db;
-MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(client => {
+async function connectToDatabase() {
+    try {
+        console.log('Attempting to connect to MongoDB Atlas...');
+        const client = await MongoClient.connect(uri, { 
+            useNewUrlParser: true, 
+            useUnifiedTopology: true,
+            retryWrites: true,
+            w: 'majority'
+        });
+        console.log('Connected to MongoDB Atlas successfully');
         db = client.db(dbName);
-        console.log('Connected to MongoDB');
-    })
-    .catch(error => console.error('MongoDB connection error:', error));
+        return client;
+    } catch (error) {
+        console.error('MongoDB Atlas connection error:', error);
+        throw error;
+    }
+}
+
+// Initialize database connection and start server
+async function startServer() {
+    try {
+        const client = await connectToDatabase();
+        
+        // Verify the connection
+        await client.db().admin().ping();
+        console.log("Successfully connected to MongoDB Atlas!");
+        
+        app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        process.exit(1);
+    }
+}
 
 // Add a root endpoint for testing
 app.get('/', (req, res) => {
@@ -152,16 +188,60 @@ app.post('/upload-image', async (req, res) => {
 
 app.post('/api/publish', async (req, res) => {
     try {
-        const { image } = req.body;
-        console.log('Publishing image:', image.slice(0, 100));
+        console.log('Received publish request');
+        const { title, description, categories, providers, cardJson, image } = req.body;
+        
+        console.log('Received data:');
+        console.log('- Title:', title);
+        console.log('- Description:', description);
+        console.log('- Categories:', categories);
+        console.log('- Providers:', providers);
+        console.log('- CardJson present:', !!cardJson);
+        console.log('- Image present:', !!image);
+        console.log('- Image type:', typeof image);
+        if (image) {
+            console.log('- Image preview:', image.substring(0, 100) + '...');
+        }
+        
+        // Validate required fields
+        if (!title) {
+            return res.status(400).json({ error: 'Title is required' });
+        }
+        if (!description) {
+            return res.status(400).json({ error: 'Description is required' });
+        }
+        if (!categories || categories.length === 0) {
+            return res.status(400).json({ error: 'At least one category is required' });
+        }
+        if (!providers || providers.length === 0) {
+            return res.status(400).json({ error: 'At least one provider is required' });
+        }
+        if (!cardJson) {
+            return res.status(400).json({ error: 'Card JSON is required' });
+        }
+        if (!image) {
+            return res.status(400).json({ error: 'Card image is required' });
+        }
+        if (!image.startsWith('data:image/')) {
+            return res.status(400).json({ error: 'Invalid image format. Must be a data URL' });
+        }
 
-        // Insert image data into MongoDB
-        const result = await db.collection('images').insertOne({ image });
+        // Save to MongoDB
+        const result = await db.collection('images').insertOne({
+            title,
+            description,
+            categories,
+            providers,
+            cardJson,
+            image,
+            createdAt: new Date()
+        });
 
-        res.json({ success: true, message: 'Image published successfully!', id: result.insertedId });
+        console.log('Successfully saved to MongoDB:', result.insertedId);
+        res.json({ success: true, id: result.insertedId });
     } catch (error) {
-        console.error('Error publishing image:', error);
-        res.status(500).json({ success: false, error: 'Internal server error' });
+        console.error('Error publishing to gallery:', error);
+        res.status(500).json({ error: 'Internal server error: ' + error.message });
     }
 });
 
@@ -175,6 +255,144 @@ app.get('/api/images', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+// Add endpoint to get all micro-apps
+app.get('/api/gallery', async (req, res) => {
+    try {
+        const collection = db.collection('images');
+        const microApps = await collection.find({}).toArray();
+        
+        // Ensure categories and providers are arrays, even if they're undefined
+        const processedApps = microApps.map(app => ({
+            ...app,
+            categories: app.categories || [],
+            providers: app.providers || []
+        }));
+        
+        res.json(processedApps);
+    } catch (error) {
+        console.error('Error fetching micro-apps:', error);
+        res.status(500).json({ error: 'Failed to fetch micro-apps' });
+    }
 });
+
+// Get specific micro-app by ID
+app.get('/api/micro-app/:id', async (req, res) => {
+    try {
+        const id = new ObjectId(req.params.id);
+        const microApp = await db.collection('images').findOne({ _id: id });
+        
+        if (!microApp) {
+            return res.status(404).json({ success: false, error: 'Micro-app not found' });
+        }
+        
+        res.json(microApp);
+    } catch (error) {
+        console.error('Error fetching micro-app:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch micro-app' });
+    }
+});
+
+// Update upvotes for a micro-app
+app.post('/api/upvote/:id', async (req, res) => {
+    try {
+        const id = new ObjectId(req.params.id);
+        const result = await db.collection('images').updateOne(
+            { _id: id },
+            { $inc: { upvotes: 1 } }
+        );
+        
+        if (result.matchedCount === 0) {
+            return res.status(404).json({ success: false, error: 'Micro-app not found' });
+        }
+        
+        const updatedApp = await db.collection('images').findOne({ _id: id });
+        res.json({ success: true, upvotes: updatedApp.upvotes });
+    } catch (error) {
+        console.error('Error updating upvotes:', error);
+        res.status(500).json({ success: false, error: 'Failed to update upvotes' });
+    }
+});
+
+// Get all categories
+app.get('/api/categories', async (req, res) => {
+    try {
+        console.log('Attempting to connect to database...');
+        if (!db) {
+            throw new Error('Database connection not established');
+        }
+
+        console.log('Fetching images collection...');
+        const collection = db.collection('images');
+        if (!collection) {
+            throw new Error('Images collection not found');
+        }
+
+        console.log('Querying documents...');
+        const microApps = await collection.find({}).toArray();
+        console.log('Found documents:', microApps.length);
+
+        console.log('Extracting categories...');
+        const categories = microApps.flatMap(app => app.categories || []);
+        const uniqueCategories = [...new Set(categories)];
+        console.log('Unique categories found:', uniqueCategories);
+
+        res.json(uniqueCategories);
+    } catch (error) {
+        console.error('Detailed error in /api/categories:', {
+            message: error.message,
+            stack: error.stack
+        });
+        res.status(500).json({ 
+            error: 'Failed to fetch categories',
+            details: error.message 
+        });
+    }
+});
+
+// Get all providers
+app.get('/api/providers', async (req, res) => {
+    try {
+        const microApps = await db.collection('images').find().toArray();
+        const providers = [...new Set(microApps.flatMap(app => app.providers))];
+        res.json(providers);
+    } catch (error) {
+        console.error('Error fetching providers:', error);
+        res.status(500).json({ error: 'Failed to fetch providers' });
+    }
+});
+
+// Serve images by ID
+app.get('/images/:id', async (req, res) => {
+    try {
+        console.log('Received request for image with ID:', req.params.id);
+        const id = new ObjectId(req.params.id);
+        console.log('Looking for document with ID:', id);
+        
+        const microApp = await db.collection('images').findOne({ _id: id });
+        console.log('Found microApp:', microApp ? 'Yes' : 'No');
+        
+        if (!microApp || !microApp.image) {
+            console.log('Image not found or no image data');
+            return res.status(404).send('Image not found');
+        }
+
+        // Extract base64 data and remove the data URL prefix if present
+        let imageData = microApp.image;
+        if (imageData.includes(',')) {
+            imageData = imageData.split(',')[1];
+        }
+
+        // Convert base64 to buffer
+        const buffer = Buffer.from(imageData, 'base64');
+        console.log('Successfully created image buffer');
+
+        // Set content type and send buffer
+        res.set('Content-Type', 'image/png');
+        res.send(buffer);
+    } catch (error) {
+        console.error('Error serving image:', error);
+        res.status(500).send('Error serving image');
+    }
+});
+
+startServer();

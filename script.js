@@ -20,14 +20,85 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorDisplay = document.getElementById('errorDisplay');
     const shareBtn = document.getElementById('shareBtn');
     const publishBtn = document.getElementById('publishBtn');
+    const publishModal = document.getElementById('publishModal');
+    const publishNowBtn = document.getElementById('publishNowBtn');
+    const categoryInput = document.getElementById('categoryInput');
+    const providersInput = document.getElementById('providersInput');
+    const selectedCategories = document.getElementById('selectedCategories');
+    const selectedProviders = document.getElementById('selectedProviders');
 
     // Initialize AdaptiveCards
     let adaptiveCard = new AdaptiveCards.AdaptiveCard();
     let currentCard = null;
 
+    // Function to create host config with fixed button color
+    function createHostConfig() {
+        return new AdaptiveCards.HostConfig({
+            fontFamily: "'TT Commons', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif",
+            spacing: {
+                small: 3,
+                default: 8,
+                medium: 20,
+                large: 30,
+                extraLarge: 40,
+                padding: 10
+            },
+            separator: {
+                lineThickness: 1,
+                lineColor: "#EEEEEE"
+            },
+            actions: {
+                maxActions: 5,
+                spacing: "default",
+                buttonSpacing: 8,
+                showCard: {
+                    actionMode: "inline",
+                    inlineTopMargin: 8
+                },
+                actionsOrientation: "horizontal",
+                actionAlignment: "stretch",
+                actionStyle: "default",
+                actions: {
+                    default: {
+                        backgroundColor: "#4752c4",
+                        textColor: "#FFFFFF",
+                        borderRadius: "4px",
+                        borderColor: "transparent",
+                        padding: "8px 16px",
+                        fontSize: "14px",
+                        fontWeight: "500",
+                        hover: {
+                            backgroundColor: "#4752c4"
+                        }
+                    }
+                }
+            },
+            containerStyles: {
+                default: {
+                    foregroundColors: {
+                        default: {
+                            default: "#000000",
+                            subtle: "#767676"
+                        }
+                    },
+                    backgroundColor: "#FFFFFF"
+                },
+                emphasis: {
+                    backgroundColor: "#F9F9F9",
+                    foregroundColors: {
+                        default: {
+                            default: "#000000",
+                            subtle: "#767676"
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     // Set default host config
     const hostConfig = {
-        fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif",
+        fontFamily: "'TT Commons', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif",
         spacing: {
             medium: 16,
             small: 4,
@@ -107,6 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Generate button handler
     generateBtn.addEventListener('click', async () => {
         const description = appDescription.value.trim();
+        const emptyState = document.querySelector('.empty-state');
         
         if (!description) {
             alert('Please provide a description for the card.');
@@ -117,6 +189,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Show loading state
             generateBtn.disabled = true;
             generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            
+            // Hide empty state message
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
             
             const card = await generateCardFromDescription(description);
             currentCard = card;
@@ -174,74 +251,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function generateCard() {
-        const description = appDescription.value.trim();
-        
-        if (!description) {
-            showError('Please enter a description for your micro-app.');
-            return;
-        }
-
-        generateBtn.disabled = true;
-        showLoading(true);
-        hideError();
-
         try {
-            const response = await fetch('https://web-production-72b3.up.railway.app/generate-card', {
+            const description = document.getElementById('appDescription').value;
+            if (!description) {
+                showError('Please enter a description');
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+
+            const response = await fetch('/generate-card', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ description })
+                body: JSON.stringify({
+                    description: description,
+                }),
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                let errorMessage = data.error || 'Error generating card';
-                let retryDelay = 3000; // Default 3 seconds
-
-                if (response.status === 429) {
-                    // Rate limit error
-                    if (data.retryAfter) {
-                        const minutes = Math.ceil(data.retryAfter / 60);
-                        errorMessage = `Rate limit exceeded. Please try again in ${minutes} minutes.`;
-                        retryDelay = data.retryAfter * 1000;
-                    } else {
-                        errorMessage = 'Too many requests. Please try again in a few seconds.';
-                    }
-                    
-                    // Disable button temporarily
-                    generateBtn.disabled = true;
-                    setTimeout(() => {
-                        generateBtn.disabled = false;
-                    }, retryDelay);
-                }
-
-                throw new Error(errorMessage);
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to generate card');
             }
 
-            // Clear any previous errors
-            hideError();
+            const data = await response.json();
+            
+            // Store the current card data (data is already the card)
+            currentCard = data;
             
             // Render the card
-            adaptiveCard.parse(data);
-            const renderedCard = adaptiveCard.render();
+            renderCard(data);
             
-            const cardContainer = adaptiveCardContainer;
-            cardContainer.innerHTML = '';
-            cardContainer.appendChild(renderedCard);
-            
-            // Enable download after successful generation
-            enableDownload();
-            
-        } catch (error) {
-            console.error('Error:', error);
-            showError(error.message);
-        } finally {
             showLoading(false);
-            if (!generateBtn.dataset.rateLimited) {
-                generateBtn.disabled = false;
-            }
+        } catch (error) {
+            console.error('Error generating card:', error);
+            showError(error.message);
+            showLoading(false);
         }
     }
 
@@ -373,73 +420,316 @@ document.addEventListener('DOMContentLoaded', () => {
     // Publish to gallery functionality
     async function publishToGallery() {
         try {
-            showMessage('Publishing to gallery...', 'info');
-            const dataUrl = await domtoimage.toPng(microApp);
-            const base64Data = dataUrl.split(',')[1];
+            const title = document.getElementById('publishTitle').value;
+            const description = document.getElementById('publishDescription').value;
+            const categories = getSelectedTags('categoryTags');
+            const providers = getSelectedTags('providerTags');
 
-            const response = await fetch('http://localhost:3000/api/publish', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    imageData: base64Data,
-                    description: appDescription.value
-                })
-            });
-
-            const result = await response.json();
-            
-            if (result.success) {
-                showMessage('Published to gallery successfully! ', 'success');
-            } else {
-                throw new Error(result.error || 'Failed to publish to gallery');
+            // Validate inputs
+            if (!title) {
+                showError('Please enter a title');
+                return;
             }
+            if (!description) {
+                showError('Please enter a description');
+                return;
+            }
+            if (!categories || categories.length === 0) {
+                showError('Please select at least one category');
+                return;
+            }
+            if (!providers || providers.length === 0) {
+                showError('Please select at least one provider');
+                return;
+            }
+            if (!currentCard) {
+                showError('Please generate a card first');
+                return;
+            }
+
+            // Show loading state
+            showLoading(true);
+
+            // Convert card to image using html2canvas
+            const cardElement = document.getElementById('microApp');
+            try {
+                console.log('Converting card to image...');
+                const canvas = await html2canvas(cardElement, {
+                    useCORS: true,
+                    scale: 2, // Higher quality
+                    backgroundColor: null
+                });
+                const imageData = canvas.toDataURL('image/png');
+                console.log('Image generated successfully:', imageData.substring(0, 100) + '...');
+
+                const requestBody = {
+                    title,
+                    description,
+                    categories,
+                    providers,
+                    cardJson: currentCard,
+                    image: imageData
+                };
+                
+                console.log('Sending request with body:', {
+                    ...requestBody,
+                    image: requestBody.image.substring(0, 100) + '...',
+                    cardJson: JSON.stringify(requestBody.cardJson).substring(0, 100) + '...'
+                });
+
+                const response = await fetch('/api/publish', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody),
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to publish card');
+                }
+
+                showLoading(false);
+                const data = await response.json();
+                showMessage('Successfully published to gallery! ', 'success');
+                resetModalState();
+                publishModal.style.display = 'none';
+            } catch (imageError) {
+                console.error('Error generating image:', imageError);
+                showError('Failed to generate card image. Please try again.');
+                showLoading(false);
+            }
+
         } catch (error) {
+            showLoading(false);
             console.error('Error publishing to gallery:', error);
-            showMessage(error.message || 'Failed to publish to gallery', 'error');
+            showError(error.message);
         }
     }
 
-    // Get JSON functionality
-    function getCardJSON() {
-        if (!currentCard) {
-            showMessage('No card generated yet', 'error');
-            return;
+    function getSelectedTags(tagContainerId) {
+        const selectedTags = [];
+        const tagContainer = document.getElementById(tagContainerId);
+        const tagButtons = tagContainer.querySelectorAll('.tag-btn.selected');
+        tagButtons.forEach(button => {
+            selectedTags.push(button.getAttribute('data-tag'));
+        });
+        return selectedTags;
+    }
+
+    // Initialize modal functionality
+    document.querySelectorAll('.modal-close').forEach(btn => {
+        btn.onclick = () => {
+            publishModal.style.display = 'none';
+        };
+    });
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        if (event.target === publishModal) {
+            publishModal.style.display = 'none';
+        }
+    };
+
+    // Add click event for publish button
+    publishBtn.addEventListener('click', openPublishModal);
+
+    // Initialize tag containers
+    function initializeTagSystem() {
+        const tagCategories = new Set();
+        const tagProviders = new Set();
+
+        // Helper function to create a tag element
+        function createTag(text, type) {
+            const tag = document.createElement('span');
+            tag.classList.add('selected-tag');
+            tag.textContent = text;
+            const removeBtn = document.createElement('span');
+            removeBtn.classList.add('remove-tag');
+            removeBtn.innerHTML = '&times;';
+            removeBtn.onclick = () => {
+                tag.remove();
+                if (type === 'category') {
+                    tagCategories.delete(text);
+                } else {
+                    tagProviders.delete(text);
+                }
+            };
+            tag.appendChild(removeBtn);
+            return tag;
         }
 
-        const jsonContent = document.getElementById('jsonContent');
-        jsonContent.textContent = JSON.stringify(currentCard, null, 2);
-        jsonModal.style.display = 'flex';
+        // Handle predefined tag buttons
+        document.querySelectorAll('#categoryTags .tag-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const text = btn.textContent;
+                if (!tagCategories.has(text)) {
+                    tagCategories.add(text);
+                    selectedCategories.appendChild(createTag(text, 'category'));
+                }
+            });
+        });
 
-        const closeBtn = jsonModal.querySelector('.close');
-        const copyBtn = jsonModal.querySelector('#copyJsonBtn');
+        document.querySelectorAll('#providerTags .tag-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const text = btn.textContent;
+                if (!tagProviders.has(text)) {
+                    tagProviders.add(text);
+                    selectedProviders.appendChild(createTag(text, 'provider'));
+                }
+            });
+        });
+
+        // Handle custom tag input
+        function handleCustomTagInput(input, selectedSet, container, type) {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && input.value.trim()) {
+                    const text = input.value.trim();
+                    if (!selectedSet.has(text)) {
+                        selectedSet.add(text);
+                        container.appendChild(createTag(text, type));
+                    }
+                    input.value = '';
+                }
+            });
+        }
+
+        handleCustomTagInput(
+            categoryInput,
+            tagCategories,
+            selectedCategories,
+            'category'
+        );
+
+        handleCustomTagInput(
+            providersInput,
+            tagProviders,
+            selectedProviders,
+            'provider'
+        );
+
+        return { tagCategories, tagProviders };
+    }
+
+    // Function to open publish modal
+    async function openPublishModal() {
+        publishModal.style.display = 'block';
         
-        closeBtn.onclick = () => {
-            jsonModal.style.display = 'none';
-        };
+        // Clear previous values
+        document.getElementById('publishTitle').value = '';
+        document.getElementById('publishDescription').value = '';
+        selectedCategories.innerHTML = '';
+        selectedProviders.innerHTML = '';
+        categoryInput.value = '';
+        providersInput.value = '';
         
-        copyBtn.onclick = () => {
-            try {
-                navigator.clipboard.writeText(JSON.stringify(currentCard, null, 2))
-                    .then(() => {
-                        showMessage('JSON copied to clipboard! ', 'success');
-                    })
-                    .catch(() => {
-                        // Fallback for older browsers
-                        const tempTextArea = document.createElement('textarea');
-                        tempTextArea.value = JSON.stringify(currentCard, null, 2);
-                        document.body.appendChild(tempTextArea);
-                        tempTextArea.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(tempTextArea);
-                        showMessage('JSON copied to clipboard! ', 'success');
+        // Get the current card element
+        const cardElement = document.getElementById('microApp');
+        
+        try {
+            // Convert card to image using html2canvas
+            console.log('Converting card to image...');
+            const canvas = await html2canvas(cardElement, {
+                useCORS: true,
+                scale: 2,
+                backgroundColor: null
+            });
+            const imageData = canvas.toDataURL('image/png');
+            console.log('Image generated successfully');
+
+            // Store the image data for use when publishing
+            window.currentCardImage = imageData;
+
+            // Initialize tag system
+            const { tagCategories, tagProviders } = initializeTagSystem();
+
+            // Handle publish button
+            publishNowBtn.onclick = async () => {
+                const title = document.getElementById('publishTitle').value.trim();
+                const description = document.getElementById('publishDescription').value.trim();
+
+                if (!title || !description || tagCategories.size === 0 || tagProviders.size === 0) {
+                    showError('Please fill in all required fields');
+                    return;
+                }
+
+                try {
+                    showLoading(true);
+                    const response = await fetch('http://localhost:3000/api/publish', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            title,
+                            description,
+                            categories: Array.from(tagCategories),
+                            providers: Array.from(tagProviders),
+                            cardJson: currentCard,
+                            image: window.currentCardImage
+                        }),
                     });
-            } catch (error) {
-                console.error('Error copying to clipboard:', error);
-                showMessage('Failed to copy JSON', 'error');
-            }
-        };
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to publish card');
+                    }
+
+                    showLoading(false);
+                    showMessage('Successfully published to gallery! ', 'success');
+                    publishModal.style.display = 'none';
+                } catch (error) {
+                    console.error('Error publishing:', error);
+                    showError(error.message);
+                    showLoading(false);
+                }
+            };
+        } catch (error) {
+            console.error('Error preparing modal:', error);
+            showError('Failed to prepare publish modal');
+        }
+    }
+
+    // Function to render card
+    function renderCard(cardJson) {
+        try {
+            console.log('Rendering card with JSON:', cardJson);
+            
+            // Create an AdaptiveCard instance
+            const adaptiveCard = new AdaptiveCards.AdaptiveCard();
+            
+            // Set the card's schema
+            adaptiveCard.parse(cardJson);
+            
+            // Render the card
+            const renderedCard = adaptiveCard.render();
+            
+            // Clear previous content and append the new card
+            const container = document.getElementById('adaptiveCardContainer');
+            container.innerHTML = '';
+            container.appendChild(renderedCard);
+            
+            // Hide empty state
+            document.getElementById('empty-state').style.display = 'none';
+            
+        } catch (error) {
+            console.error('Error rendering card:', error);
+            showError('Failed to render card');
+        }
+    }
+
+    // Function to show message
+    function showMessage(message, type) {
+        const messageElement = document.createElement('div');
+        messageElement.textContent = message;
+        messageElement.className = `message ${type}`;
+        document.body.appendChild(messageElement);
+
+        // Remove the message after animation completes (3 seconds)
+        messageElement.addEventListener('animationend', () => {
+            messageElement.remove();
+        });
     }
 
     // Create JSON Modal
@@ -471,7 +761,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add event listeners
     downloadBtn.addEventListener('click', downloadAsPNG);
     shareBtn.addEventListener('click', getShareableLink);
-    publishBtn.addEventListener('click', publishToGallery);
     getJsonBtn.addEventListener('click', getCardJSON);
 
     // Close modal when clicking outside
@@ -516,6 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Publish to Gallery
+    /* lkqsjd 
     publishBtn.addEventListener('click', async () => {
         try {
             const dataUrl = await domtoimage.toPng(document.getElementById('microApp'));
@@ -533,8 +823,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error publishing to gallery:', error);
         }
-    });
-
+    });*/
+     
     // Function to render card
     function renderCard(cardJson) {
         try {
@@ -543,49 +833,77 @@ document.addEventListener('DOMContentLoaded', () => {
             // Create an AdaptiveCard instance
             const adaptiveCard = new AdaptiveCards.AdaptiveCard();
             
-            // Set host config
-            adaptiveCard.hostConfig = new AdaptiveCards.HostConfig({
-                fontFamily: "League Spartan, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                spacing: {
-                    small: 3,
-                    default: 8,
-                    medium: 20,
-                    large: 30,
-                    extraLarge: 40,
-                    padding: 10
-                },
-                separator: {
-                    lineThickness: 1,
-                    lineColor: "#EEEEEE"
-                }
-            });
-
-            // Parse the card payload
+            // Set the card's schema
             adaptiveCard.parse(cardJson);
-            
-            // Clear the existing card
-            adaptiveCardContainer.innerHTML = '';
             
             // Render the card
             const renderedCard = adaptiveCard.render();
             
-            // Add the card to the container
-            adaptiveCardContainer.appendChild(renderedCard);
+            // Clear previous content and append the new card
+            const container = document.getElementById('adaptiveCardContainer');
+            container.innerHTML = '';
+            container.appendChild(renderedCard);
             
-            console.log('Card rendered successfully');
+            // Hide empty state
+            document.getElementById('empty-state').style.display = 'none';
+            
         } catch (error) {
             console.error('Error rendering card:', error);
-            throw new Error('Failed to render card: ' + error.message);
+            showError('Failed to render card');
         }
     }
 
+    // Function to show message
     function showMessage(message, type) {
         const messageElement = document.createElement('div');
         messageElement.textContent = message;
         messageElement.className = `message ${type}`;
         document.body.appendChild(messageElement);
-        setTimeout(() => {
+
+        // Remove the message after animation completes (3 seconds)
+        messageElement.addEventListener('animationend', () => {
             messageElement.remove();
-        }, 3000);
+        });
+    }
+
+    // Get JSON functionality
+    function getCardJSON() {
+        if (!currentCard) {
+            showMessage('No card generated yet', 'error');
+            return;
+        }
+
+        const jsonContent = document.getElementById('jsonContent');
+        jsonContent.textContent = JSON.stringify(currentCard, null, 2);
+        jsonModal.style.display = 'flex';
+
+        const closeBtn = jsonModal.querySelector('.close');
+        const copyBtn = jsonModal.querySelector('#copyJsonBtn');
+        
+        closeBtn.onclick = () => {
+            jsonModal.style.display = 'none';
+        };
+        
+        copyBtn.onclick = () => {
+            try {
+                navigator.clipboard.writeText(JSON.stringify(currentCard, null, 2))
+                    .then(() => {
+                        showMessage('JSON copied to clipboard! ', 'success');
+                    })
+                    .catch(() => {
+                        // Fallback for older browsers
+                        const tempTextArea = document.createElement('textarea');
+                        tempTextArea.value = JSON.stringify(currentCard, null, 2);
+                        document.body.appendChild(tempTextArea);
+                        tempTextArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(tempTextArea);
+                        showMessage('JSON copied to clipboard! ', 'success');
+                    });
+            } catch (error) {
+                console.error('Error copying to clipboard:', error);
+                showMessage('Failed to copy JSON', 'error');
+            }
+        };
     }
 });

@@ -3,13 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Micro-App Gallery</title>
+    <title>Micro-app Gallery</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            background-color: #ffffff;
+        }
+        .gallery-container {
+            background-color: #f7f7f7;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .gallery-title {
+            text-align: left;
+            margin: 0 0 20px 0;
+        }
+        .filters-container {
+            margin-bottom: 20px;
+        }
+        .filter-tag {
+            background-color: #e0e0e0;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin: 5px;
+            display: inline-block;
+        }
+        @font-face {
+            font-family: 'TT Commons';
+            src: url('fonts/TTCommons-Book.woff2') format('woff2'),
+                 url('fonts/TTCommons-Book.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+    </style>
 </head>
 <body>
     <nav class="main-navigation">
@@ -18,17 +52,29 @@
             <span class="nav-title">Lumapps Micro-apps</span>
         </div>
         <div class="nav-links">
-            <a href="index.html" class="nav-link">Create Micro-App</a>
+            <a href="index.html" class="nav-link">Generator</a>
             <a href="gallery.html" class="nav-link active">Gallery</a>
         </div>
     </nav>
 
-    <div class="container">
-        <main>
-            <div id="loading" class="loading-message">Loading gallery...</div>
-            <div id="gallery" class="gallery-grid"></div>
-        </main>
-    </div>
+    <main class="container">
+        <div class="gallery-container">
+            <h1 class="gallery-title">Micro-app Gallery</h1>
+            <div class="filters-container">
+                <div class="filter-section">
+                    <h3 class="filter-title">Categories</h3>
+                    <div id="category-filters" class="filter-options"></div>
+                </div>
+                <div class="filter-section">
+                    <h3 class="filter-title">Providers</h3>
+                    <div id="provider-filters" class="filter-options"></div>
+                </div>
+            </div>
+            <div id="microAppCards" class="micro-app-cards">
+                <!-- Micro-app cards will be dynamically inserted here -->
+            </div>
+        </div>
+    </main>
 
     <script src="gallery.js"></script>
 </body>
