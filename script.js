@@ -175,6 +175,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize color preview
     colorPreview.textContent = backgroundColor.value.toUpperCase();
 
+    // API URL based on environment
+    const API_URL = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3000'
+        : 'https://web-production-72b3.up.railway.app';
+
     // Generate button handler
     generateBtn.addEventListener('click', async () => {
         const description = appDescription.value.trim();
@@ -221,9 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function generateCardFromDescription(description) {
         try {
-            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const API_URL = isLocalhost ? 'http://localhost:3000' : 'https://web-production-72b3.up.railway.app';
-            
             console.log('Making request to:', `${API_URL}/generate-card`);
             const response = await fetch(`${API_URL}/generate-card`, {
                 method: 'POST',
@@ -261,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showLoading(true);
             hideError();
 
-            const response = await fetch('/generate-card', {
+            const response = await fetch(`${API_URL}/generate-card`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -339,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dataUrl = await domtoimage.toPng(microApp);
             const base64Data = dataUrl.split(',')[1];
 
-            const response = await fetch('http://localhost:3000/upload-image', {
+            const response = await fetch(`${API_URL}/upload-image`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -477,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     cardJson: JSON.stringify(requestBody.cardJson).substring(0, 100) + '...'
                 });
 
-                const response = await fetch('/api/publish', {
+                const response = await fetch(`${API_URL}/api/publish`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -656,7 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 try {
                     showLoading(true);
-                    const response = await fetch('http://localhost:3000/api/publish', {
+                    const response = await fetch(`${API_URL}/api/publish`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -788,7 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
     shareBtn.addEventListener('click', async () => {
         try {
             const dataUrl = await domtoimage.toPng(document.getElementById('microApp'));
-            const response = await fetch('http://localhost:3000/upload-image', {
+            const response = await fetch(`${API_URL}/upload-image`, {
                 method: 'POST',
                 body: JSON.stringify({ imageData: dataUrl.split(',')[1] }),
                 headers: { 'Content-Type': 'application/json' },
@@ -809,7 +811,7 @@ document.addEventListener('DOMContentLoaded', () => {
     publishBtn.addEventListener('click', async () => {
         try {
             const dataUrl = await domtoimage.toPng(document.getElementById('microApp'));
-            const response = await fetch('http://localhost:3000/api/publish', {
+            const response = await fetch(`${API_URL}/api/publish`, {
                 method: 'POST',
                 body: JSON.stringify({ image: dataUrl.split(',')[1] }),
                 headers: { 'Content-Type': 'application/json' },

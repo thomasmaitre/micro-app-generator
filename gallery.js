@@ -1,3 +1,8 @@
+// API URL based on environment
+const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3000'
+    : 'https://web-production-72b3.up.railway.app';
+
 document.addEventListener('DOMContentLoaded', async () => {
     let microApps = [];
     const microAppCards = document.getElementById('microAppCards');
@@ -10,11 +15,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function populateFilters() {
         try {
             // Fetch categories from API
-            const categoriesResponse = await fetch('http://localhost:3000/api/categories');
+            const categoriesResponse = await fetch(`${API_URL}/api/categories`);
             const categories = await categoriesResponse.json();
             
             // Fetch providers from API
-            const providersResponse = await fetch('http://localhost:3000/api/providers');
+            const providersResponse = await fetch(`${API_URL}/api/providers`);
             const providers = await providersResponse.json();
 
             // Populate category filters
@@ -73,7 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Fetch micro-apps from the server
     async function fetchMicroApps() {
         try {
-            const response = await fetch('http://localhost:3000/api/gallery');
+            const response = await fetch(`${API_URL}/api/gallery`);
             if (!response.ok) throw new Error('Failed to fetch micro-apps');
             microApps = await response.json();
             displayMicroApps(microApps);
@@ -96,7 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             card.className = 'micro-app-card';
             
             // Create image URL using the app's ID with server URL prefix
-            const imageUrl = app.image ? `http://localhost:3000/images/${app._id}` : 'default-image.png';
+            const imageUrl = app.image ? `${API_URL}/images/${app._id}` : 'default-image.png';
             
             card.innerHTML = `
                 <div class="card-image">
@@ -133,7 +138,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Download JSON function
     async function downloadJSON(appId) {
         try {
-            const response = await fetch(`http://localhost:3000/api/micro-app/${appId}`);
+            const response = await fetch(`${API_URL}/api/micro-app/${appId}`);
             if (!response.ok) throw new Error('Failed to fetch micro-app data');
             
             const data = await response.json();
@@ -156,7 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Toggle upvote function
     async function toggleUpvote(appId, button) {
         try {
-            const response = await fetch(`http://localhost:3000/api/upvote/${appId}`, {
+            const response = await fetch(`${API_URL}/api/upvote/${appId}`, {
                 method: 'POST'
             });
             if (!response.ok) throw new Error('Failed to update upvote');
