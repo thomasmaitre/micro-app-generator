@@ -100,7 +100,8 @@ function setupRoutes() {
             '/api/providers',
             '/images/:id',
             '/api/micro-app/:id',
-            '/api/upvote/:id'
+            '/api/upvote/:id',
+            '/api/generate-micro-app'
         ];
         
         res.json({ 
@@ -309,6 +310,15 @@ function setupRoutes() {
             const collection = db.collection('images');
             const microApps = await collection.find({}).toArray();
             
+            console.log('Found micro-apps:', microApps.length);
+            if (microApps.length > 0) {
+                console.log('Sample app:', {
+                    id: microApps[0]._id,
+                    hasImage: !!microApps[0].image,
+                    imagePreview: microApps[0].image ? microApps[0].image.substring(0, 100) + '...' : 'no image'
+                });
+            }
+            
             // Ensure categories and providers are arrays, even if they're undefined
             const processedApps = microApps.map(app => ({
                 ...app,
@@ -341,23 +351,50 @@ function setupRoutes() {
     });
 
     // Update upvotes for a micro-app
-    app.post('/api/upvote/:id', async (req, res) => {
+    app.post('/api/gallery/:id/upvote', async (req, res) => {
         try {
+            console.log('Upvoting micro-app:', req.params.id);
             const id = new ObjectId(req.params.id);
+            
+            // First, check if the document exists
+            const microApp = await db.collection('images').findOne({ _id: id });
+            if (!microApp) {
+                console.error('Micro-app not found:', req.params.id);
+                return res.status(404).json({ 
+                    success: false, 
+                    error: 'Micro-app not found' 
+                });
+            }
+
+            // Initialize upvotes if it doesn't exist
+            const currentUpvotes = microApp.upvotes || 0;
+            
+            // Update the document
             const result = await db.collection('images').updateOne(
                 { _id: id },
-                { $inc: { upvotes: 1 } }
+                { $set: { upvotes: currentUpvotes + 1 } }
             );
             
-            if (result.matchedCount === 0) {
-                return res.status(404).json({ success: false, error: 'Micro-app not found' });
+            if (result.modifiedCount === 0) {
+                console.error('Failed to update upvotes for:', req.params.id);
+                return res.status(500).json({ 
+                    success: false, 
+                    error: 'Failed to update upvotes' 
+                });
             }
             
-            const updatedApp = await db.collection('images').findOne({ _id: id });
-            res.json({ success: true, upvotes: updatedApp.upvotes });
+            console.log('Successfully upvoted micro-app:', req.params.id);
+            res.json({ 
+                success: true, 
+                upvotes: currentUpvotes + 1 
+            });
         } catch (error) {
             console.error('Error updating upvotes:', error);
-            res.status(500).json({ success: false, error: 'Failed to update upvotes' });
+            res.status(500).json({ 
+                success: false, 
+                error: 'Failed to update upvotes',
+                details: error.message 
+            });
         }
     });
 
@@ -400,12 +437,65 @@ function setupRoutes() {
     // Get all providers
     app.get('/api/providers', async (req, res) => {
         try {
-            const microApps = await db.collection('images').find().toArray();
-            const providers = [...new Set(microApps.flatMap(app => app.providers))];
-            res.json(providers);
+            const collection = db.collection('images');
+            const microApps = await collection.find({}).toArray();
+            const providers = microApps.flatMap(app => app.providers || []);
+            const uniqueProviders = [...new Set(providers)];
+            res.json(uniqueProviders);
         } catch (error) {
             console.error('Error fetching providers:', error);
             res.status(500).json({ error: 'Failed to fetch providers' });
+        }
+    });
+
+    // Get image for a specific micro-app
+    app.get('/api/gallery/:id/image', async (req, res) => {
+        try {
+            console.log('Fetching image for id:', req.params.id);
+            let id;
+            try {
+                id = new ObjectId(req.params.id);
+            } catch (error) {
+                console.error('Invalid ObjectId:', req.params.id);
+                return res.status(400).json({ error: 'Invalid ID format' });
+            }
+
+            const microApp = await db.collection('images').findOne({ _id: id });
+            console.log('Found microApp:', microApp ? 'yes' : 'no');
+            
+            if (!microApp) {
+                console.error('MicroApp not found for id:', req.params.id);
+                return res.status(404).json({ error: 'MicroApp not found' });
+            }
+
+            if (!microApp.image) {
+                console.error('Image data missing for id:', req.params.id);
+                return res.status(404).json({ error: 'Image data missing' });
+            }
+
+            console.log('Image data type:', typeof microApp.image);
+            console.log('Image data preview:', microApp.image.substring(0, 100) + '...');
+            
+            // Extract image data and content type from the data URL
+            const matches = microApp.image.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+            console.log('Image data format valid:', matches ? 'yes' : 'no');
+            
+            if (!matches || matches.length !== 3) {
+                console.error('Invalid image data format');
+                return res.status(400).json({ error: 'Invalid image data format' });
+            }
+            
+            const contentType = matches[1];
+            const imageData = Buffer.from(matches[2], 'base64');
+            
+            console.log('Content-Type:', contentType);
+            console.log('Image data size:', imageData.length, 'bytes');
+
+            res.set('Content-Type', contentType);
+            res.send(imageData);
+        } catch (error) {
+            console.error('Error fetching image:', error);
+            res.status(500).json({ error: 'Failed to fetch image', details: error.message });
         }
     });
 
@@ -440,6 +530,320 @@ function setupRoutes() {
         } catch (error) {
             console.error('Error serving image:', error);
             res.status(500).send('Error serving image');
+        }
+    });
+
+    // Generate full micro-app JSON
+    app.post('/api/generate-micro-app', async (req, res) => {
+        try {
+            const { title, description, categories, providers } = req.body;
+            
+            if (!title || !description || !categories || !providers) {
+                return res.status(400).json({ 
+                    error: 'Missing required fields: title, description, categories, and providers are required' 
+                });
+            }
+
+            console.log('Generating micro-app with:', { title, description, categories, providers });
+
+            const prompt = `We built a tool that allow users to create micro-apps.
+A Micro-app is a sequence of block of either type adaptive card or api call. All micro-apps start with a trigger block.
+Adaptive card block are used to display information or ask for information to the end user.
+API call blocks are used to make api call to a third party.
+
+Generate a micro-app based on this context:
+- title: ${title}
+- description: ${description}
+- category: ${categories.join(', ')}
+- providers: ${providers.join(', ')}
+
+The micro-app should follow the DTO structure and include proper blocks based on the description and providers. Make sure to generate valid JSON that matches the MicroAppPayload type.
+
+IMPORTANT: Respond only with the JSON, no additional text or explanations.`;
+            const microAppExample = `[
+    {
+        "code": "show_status",
+        "id": "a4d0b16d-51b8-42dd-a1b6-02058e37c653",
+        "name": "Show status",
+        "settings": {
+        "template": {
+        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+        "body": [
+                       {
+            "text": "Text",
+            "type": "TextBlock",
+            "wrap": true
+                       }
+                   ],
+        "type": "AdaptiveCard",
+        "version": "1.6"
+               }
+           },
+"type": "adaptive_card",
+"links": [],
+"position": {
+"x": 456,
+"y": 0
+           }
+       },
+{
+    "code": "github",
+    "id": "4c374909-b84a-4154-b5db-648b762550df",
+    "name": "github",
+    "settings": {
+    "authentication": {
+    "method": "public"
+},
+"endpoint": {
+"httpMethod": "GET",
+"body": "",
+"path": "",
+"queryParams": [],
+"url": "https://api.github.com/status"
+               }
+           },
+"type": "api_call",
+"links": [
+{
+    "targetId": "a4d0b16d-51b8-42dd-a1b6-02058e37c653"
+}
+           ],
+"position": {
+"x": 228,
+"y": 0
+           }
+       },
+{
+    "code": "start",
+    "id": "fe99cbbc-87a5-43a9-838e-39d9acc0dcf7",
+    "name": "Start",
+    "type": "trigger",
+    "links": [
+    {
+        "targetId": "4c374909-b84a-4154-b5db-648b762550df"
+    }
+           ],
+    "position": {
+    "x": 0,
+    "y": 0
+}
+       }
+    ].
+    
+    Here are the DTO from the code
+import { EntityPayload } from "./entity-payload";
+/**
+* MicroApp message properties.
+* @todo EntityPayload : It will have to be improved as it's a shared entity
+*/
+export type MicroAppPayload = EntityPayload & {
+    /**
+     * extension's id
+     */
+    extensionId: string;
+    /**
+     * extension's version id
+     */
+    extensionVersionId: string;
+    /**
+     * The partner's ID related to the extension
+     * @example 440a5c5a-9300-4b20-afce-182c9a42394a
+     */
+    partnerId: string;
+    /**
+     * MicroApp actions
+     */
+    actions: Array<
+        | MicroAppApiCallAction
+        | MicroAppAdaptiveCardAction
+        | MicroAppRouterAction
+        | MicroAppTriggerAction
+        | MicroAppFunctionAction
+    >;
+};
+type MicroAppAction = {
+    /**
+     * Unique identifier of the action
+     * @example f94d4327-d5e2-4a57-86aa-39f5d45d4c8f
+     */
+    id: string;
+    /**
+     *  Links attached to this action
+     */
+    links?: {
+        /**
+         *  The ID of the action targeted by this edge
+         */
+        targetId: string;
+    }[];
+    /**
+     * Display name
+     */
+    name: string;
+    /**
+     * Normalized name set as ID. It will be used in execution context data
+     */
+    code: string;
+    /**
+     * Type of action
+        - adaptive_card: return a AdaptiveCard JSON from template
+        - api_call: execute an HTTP Request, put the result in execution context
+        - router: allow multi path flow
+        - trigger: first action of the flow
+     */
+    type: "adaptive_card" | "api_call" | "router" | "trigger" | "function";
+};
+type MicroAppApiCallAction = MicroAppAction & {
+    type: "api_call";
+    settings: MicroAppAPICallSettings;
+};
+type MicroAppAdaptiveCardAction = MicroAppAction & {
+    type: "adaptive_card";
+    settings: MicroAppAdaptiveCardSettings;
+};
+type MicroAppRouterAction = MicroAppAction & {
+    type: "router";
+};
+type MicroAppTriggerAction = MicroAppAction & {
+    type: "trigger";
+};
+type MicroAppFunctionAction = MicroAppAction & {
+    type: "function";
+    settings: MicroAppFunctionActionSettings;
+};
+type MicroAppAPICallSettings = {
+    /**
+     * Request settings (only if type is api)
+     */
+    endpoint: MicroAppAPICallSettingsEndpoint;
+    /**
+     * Request authentication settings
+     */
+    authentication: MicroAppAPICallAuthenticationSettings;
+    /**
+     * Provider identifier for authenticated API calls (only if type is api)
+     *
+     * @deprecated will be removed after authentication migration
+     */
+    providerType?: string;
+};
+type MicroAppAPICallAuthenticationSettings = {
+    /**
+     * Type of authentication for the api call
+     *  - public: for non authenticated calls
+     *  - lumapps: for internal api calls (using the Lumapps user's jwt)
+     *  - connector: for third party provider authenticated calls (ie: slack, microsoft, ...)
+     */
+    method: "public" | "lumapps" | "connector";
+    /**
+     * Provider identifier for authenticated API calls (only if type is api)
+     *
+     * @example microsoft
+     */
+    providerType?: string;
+};
+type MicroAppAPICallSettingsEndpoint = {
+    httpMethod: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD";
+    /**
+     * Absolute URL to request
+     * Required when providerType is undefined
+     * @example https://api.lumapps.net/entities
+     */
+    url?: string;
+    /**
+     * Relative URL to request
+     * It will be join to the base URL of the provider connector
+     * Must start with a slash
+     * Required when providerType is defined
+     * @example /entities
+     */
+    path?: string;
+    /**
+     * HTTP headers to sent (key-value object)
+     */
+    headers?: { [key: string]: string };
+    /**
+     * URL query params to sent (key-value object)
+     */
+    queryParams?: { key: string; value: string }[];
+    /**
+     *  Body value, it could be a template
+     */
+    body?: string;
+};
+type MicroAppAdaptiveCardSettings = {
+    template?: AdaptiveCard;
+};
+/**
+ Adaptive Card template, using MS Adaptive Card format
+ Only if type is adaptive_card
+ Schema: http://adaptivecards.io/schemas/adaptive-card.json
+ Example: https://learn.microsoft.com/en-us/microsoftteams/platform/task-modules-and-cards/cards/cards-format
+*/
+type AdaptiveCard = {
+    $schema: string;
+    actions?: unknown;
+    body: unknown;
+    type: "AdaptiveCard";
+    version: string;
+};
+type MicroAppFunctionActionSettings = {
+    language: "javascript";
+    source: string;
+};`
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: "gpt-3.5-turbo",
+                    messages: [
+                        {
+                            role: "system",
+                            content: "You are a helpful assistant that generates micro-app JSON configurations. Always respond with valid JSON that matches the MicroAppPayload type structure."
+                        },
+                        {
+                            role: "user",
+                            content: "app that start with the trigger block, that we perform an api call to github in order to get the status message that we display to the end user in an adaptive card."
+                        },
+                        {
+                            role: "assistant",
+                            content: microAppExample
+                        },
+                        {
+                            role: "user",
+                            content: prompt
+                        }
+                    ],
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || 'OpenAI API request failed');
+            }
+
+            const data = await response.json();
+            const microAppJson = data.choices[0].message.content.trim();
+            
+            // Try to parse the JSON to validate it
+            try {
+                JSON.parse(microAppJson);
+            } catch (parseError) {
+                throw new Error('Generated JSON is invalid: ' + parseError.message);
+            }
+
+            console.log('Successfully generated micro-app JSON');
+            res.json({ success: true, microAppJson });
+        } catch (error) {
+            console.error('Error generating micro-app:', error);
+            res.status(500).json({ 
+                error: 'Failed to generate micro-app',
+                details: error.message 
+            });
         }
     });
 }
