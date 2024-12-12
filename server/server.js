@@ -4,6 +4,8 @@ const cors = require('cors');
 const fetch = require('node-fetch');
 const FormData = require('form-data');
 const { MongoClient, ObjectId } = require('mongodb');
+const fs = require('fs').promises;
+const path = require('path');
 
 const app = express();
 
@@ -846,45 +848,150 @@ type MicroAppFunctionActionSettings = {
     app.post('/publish-preview', async (req, res) => {
         try {
             const { appName, logo, selectedApps, timestamp } = req.body;
-            
-            if (!appName || !selectedApps || !Array.isArray(selectedApps)) {
-                return res.status(400).json({ 
-                    error: 'App name and selected apps are required' 
-                });
-            }
-
-            // Generate a unique identifier for the preview
             const previewId = new ObjectId();
             
-            // Store the preview data in MongoDB
-            const preview = {
-                _id: previewId,
-                appName,
-                logo,
-                selectedApps,
-                timestamp,
-                createdAt: new Date()
-            };
+            // Create the preview HTML content
+            const htmlContent = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${appName} - Published Preview</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="../styles.css">
+    <script src="https://unpkg.com/adaptivecards@2.11.2/dist/adaptivecards.min.js"></script>
+</head>
+<body>
+    <nav class="main-navigation">
+        <div class="nav-logo">
+            <img src="https://res.cloudinary.com/vizir2/image/upload/v1732533463/Companion-icon_rw3nk3.png" alt="Logo" class="logo">
+            <span class="nav-title">LumApps Micro-apps</span>
+        </div>
+        <div class="nav-links">
+            <a href="../index.html" class="nav-link">Generator</a>
+            <a href="../gallery.html" class="nav-link">Gallery</a>
+            <a href="../preview.html" class="nav-link">Preview</a>
+        </div>
+    </nav>
 
-            await db.collection('previews').insertOne(preview);
+    <div class="preview-panel">
+        <div id="previewFrame">
+            <div class="status-bar">
+                <span class="time">12:30</span>
+                <div class="status-icons">
+                    <i class="fas fa-signal"></i>
+                    <i class="fas fa-wifi"></i>
+                    <i class="fas fa-battery-full"></i>
+                </div>
+            </div>
+            <div class="preview-header">
+                <img id="previewLogo" src="${logo}" alt="App Logo" class="preview-logo">
+                <h3 id="previewTitle" class="preview-title">${appName}</h3>
+            </div>
+            <div class="preview-content">
+                <div class="preview-title">
+                    <h2>Shortcuts</h2>
+                </div>
+                <div id="previewAppsList" class="previewAppsList">
+                    ${selectedApps.map(app => `
+                        <div class="app-service" data-app-id="${app._id}">
+                            <div class="service-icon">
+                                <i class="${app.icon || 'fas fa-cube'}"></i>
+                            </div>
+                            <div class="service-info">
+                                <h4>${app.title}</h4>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="mobile-app-modal" id="mobileAppModal">
+                    <div class="mobile-modal-content">
+                        <div class="mobile-modal-header">
+                            <button class="back-button" onclick="closeMobileModal()">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <h3 id="mobileModalTitle"></h3>
+                        </div>
+                        <div class="modal-body">
+                            <div id="adaptiveCardContainer"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            // Generate the public URL
-            const publicUrl = process.env.NODE_ENV === 'production'
-                ? `https://thomasmaitre.github.io/micro-app-generator/published-preview/${previewId}`
-                : `http://localhost:8000/published-preview/${previewId}`;
+    <script>
+        const selectedApps = ${JSON.stringify(selectedApps)};
+        
+        function updateTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.querySelector('.status-bar .time').textContent = \`\${hours}:\${minutes}\`;
+        }
+        
+        setInterval(updateTime, 60000);
+        updateTime();
 
-            res.json({ 
-                success: true, 
-                previewId: previewId.toString(),
-                publicUrl 
+        function openMobileModal(app) {
+            const modal = document.getElementById('mobileAppModal');
+            const title = document.getElementById('mobileModalTitle');
+            const container = document.getElementById('adaptiveCardContainer');
+            
+            title.textContent = app.title;
+            container.innerHTML = '';
+            
+            try {
+                const adaptiveCard = new AdaptiveCards.AdaptiveCard();
+                adaptiveCard.parse(app.cardJson);
+                container.appendChild(adaptiveCard.render());
+            } catch (error) {
+                console.error('Error rendering card:', error);
+                container.innerHTML = \`<p>Error rendering card: \${error.message}</p>\`;
+            }
+            
+            document.getElementById('previewAppsList').style.display = 'none';
+            modal.style.display = 'block';
+        }
+
+        function closeMobileModal() {
+            const modal = document.getElementById('mobileAppModal');
+            modal.style.display = 'none';
+            document.getElementById('previewAppsList').style.display = 'grid';
+        }
+
+        // Add click handlers to app services
+        document.querySelectorAll('.app-service').forEach(service => {
+            service.addEventListener('click', () => {
+                const appId = service.getAttribute('data-app-id');
+                const app = selectedApps.find(app => app._id === appId);
+                if (app) {
+                    openMobileModal(app);
+                }
             });
+        });
+    </script>
+</body>
+</html>`;
+
+            // Ensure the published-preview directory exists
+            const previewDir = path.join(__dirname, '..', 'published-preview');
+            await fs.mkdir(previewDir, { recursive: true });
+
+            // Write the HTML file
+            const filePath = path.join(previewDir, `${previewId}.html`);
+            await fs.writeFile(filePath, htmlContent);
+
+            // Return the public URL
+            const publicUrl = `https://thomasmaitre.github.io/micro-app-generator/published-preview/${previewId}.html`;
+            res.json({ success: true, publicUrl });
 
         } catch (error) {
             console.error('Error publishing preview:', error);
-            res.status(500).json({ 
-                error: 'Failed to publish preview',
-                details: error.message 
-            });
+            res.status(500).json({ success: false, error: 'Failed to publish preview' });
         }
     });
 
