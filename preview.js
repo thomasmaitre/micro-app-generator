@@ -6,7 +6,7 @@ const API_URL = window.location.hostname === 'localhost'
 let selectedApps = [];
 let availableApps = [];
 
-// Global functions for modal operations
+// Global functions for modal and app selection operations
 async function copyUrl(button) {
     const input = button.parentElement.querySelector('input');
     const text = input.value;
@@ -33,6 +33,307 @@ function closePublishModal(button) {
     if (modal) {
         modal.remove();
     }
+}
+
+function toggleAppSelection(card, app) {
+    card.classList.toggle('selected');
+}
+
+function confirmAppSelection() {
+    const selectedCards = document.querySelectorAll('.app-card.selected');
+    selectedApps = Array.from(selectedCards).map(card => {
+        const appTitle = card.querySelector('h3').textContent;
+        const app = availableApps.find(app => app.title === appTitle);
+        return app;
+    });
+    
+    updateSelectedAppsList();
+    closeAppSelector();
+}
+
+function closeAppSelector() {
+    const modal = document.getElementById('appSelectorModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function updateSelectedAppsList() {
+    const selectedAppsList = document.getElementById('selectedAppsList');
+    if (!selectedAppsList) return;
+    
+    selectedAppsList.innerHTML = '';
+    
+    selectedApps.forEach((app, index) => {
+        const appElement = document.createElement('div');
+        appElement.className = 'app-service';
+        appElement.innerHTML = `
+            <div class="service-icon">
+                <i class="${app.icon || 'fas fa-cube'}"></i>
+            </div>
+            <div class="service-info">
+                <h4>${app.title}</h4>
+            </div>
+            <div class="app-controls">
+                <button class="app-control-btn edit" onclick="editAppIcon(${index})" title="Edit Icon">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="app-control-btn delete" onclick="deleteApp(${index})" title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        selectedAppsList.appendChild(appElement);
+    });
+    
+    updatePreview();
+}
+
+function deleteApp(index) {
+    selectedApps.splice(index, 1);
+    updateSelectedAppsList();
+}
+
+function updatePreview() {
+    const appServices = document.getElementById('appServices');
+    if (!appServices) return;
+    
+    appServices.innerHTML = '';
+    
+    selectedApps.forEach(app => {
+        const serviceElement = document.createElement('div');
+        serviceElement.className = 'app-service';
+        serviceElement.setAttribute('data-app-id', app._id);
+        serviceElement.innerHTML = `
+            <div class="service-icon">
+                <i class="fas fa-${app.icon || 'cube'}"></i>
+            </div>
+            <div class="service-info">
+                <h4>${app.title}</h4>
+            </div>
+        `;
+        
+        serviceElement.addEventListener('click', () => openMobileModal(app));
+        appServices.appendChild(serviceElement);
+    });
+}
+
+function openMobileModal(app) {
+    const modal = document.getElementById('mobileAppModal');
+    const title = document.getElementById('mobileModalTitle');
+    const body = document.getElementById('mobileModalBody');
+    const appServices = document.getElementById('appServices');
+    
+    if (!modal || !title || !body || !appServices) return;
+    
+    title.textContent = app.title;
+    body.innerHTML = '';
+    
+    try {
+        // Create an AdaptiveCard instance
+        var adaptiveCard = new AdaptiveCards.AdaptiveCard();
+        
+        // Parse and render the card
+        adaptiveCard.parse(app.cardJson);
+        let renderedCard = adaptiveCard.render();
+        body.appendChild(renderedCard);
+    } catch (error) {
+        console.error('Error rendering card:', error);
+        body.innerHTML = `<p>Error rendering card: ${error.message}</p>`;
+    }
+    
+    // Hide app services and show modal
+    appServices.style.display = 'none';
+    modal.style.display = 'block';
+}
+
+function closeMobileModal() {
+    const modal = document.getElementById('mobileAppModal');
+    const appServices = document.getElementById('appServices');
+    
+    if (!modal || !appServices) return;
+    
+    // Hide modal and show app services with animation
+    modal.style.display = 'none';
+    appServices.style.display = 'grid';
+}
+
+async function loadAvailableApps() {
+    try {
+        const response = await fetch(`${API_URL}/api/gallery`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch micro-apps');
+        }
+        availableApps = await response.json();
+    } catch (error) {
+        console.error('Error loading available apps:', error);
+        availableApps = [];
+    }
+}
+
+function openAppSelector() {
+    const modal = document.getElementById('appSelectorModal');
+    const appGrid = document.getElementById('appGrid');
+    
+    if (!modal || !appGrid) return;
+    
+    // Clear previous content
+    appGrid.innerHTML = '';
+    
+    // Add available apps to the grid
+    availableApps.forEach(app => {
+        const card = document.createElement('div');
+        card.className = 'app-card';
+        if (selectedApps.some(selected => selected._id === app._id)) {
+            card.classList.add('selected');
+        }
+        
+        card.innerHTML = `
+            <h3>${app.title}</h3>
+            <p>${app.description?.substring(0, 50) || ''}...</p>
+        `;
+        
+        card.addEventListener('click', () => toggleAppSelection(card, app));
+        appGrid.appendChild(card);
+    });
+    
+    modal.style.display = 'block';
+}
+
+function editAppIcon(index) {
+    const app = selectedApps[index];
+    const icons = [
+        // Common UI Icons
+        'fas fa-home',
+        'fas fa-cog',
+        'fas fa-user',
+        'fas fa-users',
+        'fas fa-bell',
+        'fas fa-search',
+        'fas fa-star',
+        'fas fa-heart',
+        
+        // Communication
+        'fas fa-envelope',
+        'fas fa-comment',
+        'fas fa-comments',
+        'fas fa-phone',
+        'fas fa-video',
+        'fas fa-share',
+        'fas fa-paper-plane',
+        'fas fa-inbox',
+        
+        // Content & Files
+        'fas fa-file',
+        'fas fa-file-alt',
+        'fas fa-folder',
+        'fas fa-image',
+        'fas fa-film',
+        'fas fa-music',
+        'fas fa-book',
+        'fas fa-bookmark',
+        
+        // Business & Analytics
+        'fas fa-chart-bar',
+        'fas fa-chart-line',
+        'fas fa-chart-pie',
+        'fas fa-briefcase',
+        'fas fa-calculator',
+        'fas fa-wallet',
+        'fas fa-dollar-sign',
+        'fas fa-euro-sign',
+        
+        // Time & Calendar
+        'fas fa-calendar',
+        'fas fa-clock',
+        'fas fa-hourglass',
+        'fas fa-stopwatch',
+        'fas fa-history',
+        'fas fa-calendar-alt',
+        'fas fa-bell-slash',
+        'fas fa-alarm-clock',
+        
+        // Tools & Settings
+        'fas fa-tools',
+        'fas fa-wrench',
+        'fas fa-sliders-h',
+        'fas fa-magic',
+        'fas fa-key',
+        'fas fa-lock',
+        'fas fa-shield-alt',
+        'fas fa-database',
+        
+        // Navigation & Location
+        'fas fa-map',
+        'fas fa-compass',
+        'fas fa-location-arrow',
+        'fas fa-globe',
+        'fas fa-map-marker-alt',
+        'fas fa-directions',
+        'fas fa-road',
+        'fas fa-car',
+        
+        // Social & Collaboration
+        'fas fa-thumbs-up',
+        'fas fa-handshake',
+        'fas fa-trophy',
+        'fas fa-medal',
+        'fas fa-crown',
+        'fas fa-gift',
+        'fas fa-award',
+        'fas fa-certificate',
+        
+        // Misc Apps
+        'fas fa-shopping-cart',
+        'fas fa-store',
+        'fas fa-camera',
+        'fas fa-gamepad',
+        'fas fa-puzzle-piece',
+        'fas fa-paint-brush',
+        'fas fa-palette',
+        'fas fa-cube'
+    ];
+    
+    // Create and show icon selector modal
+    const modal = document.createElement('div');
+    modal.className = 'modal icon-selector-modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Select Icon</h3>
+            <div class="icon-grid">
+                ${icons.map(icon => `
+                    <div class="icon-option ${icon === app.icon ? 'selected' : ''}" data-icon="${icon}">
+                        <i class="${icon}"></i>
+                    </div>
+                `).join('')}
+            </div>
+            <div class="modal-actions">
+                <button class="button" onclick="this.closest('.modal').remove()">Cancel</button>
+                <button class="button primary" onclick="saveIcon(${index}, this)">Save</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'block';
+    
+    // Add click handlers for icon selection
+    modal.querySelectorAll('.icon-option').forEach(option => {
+        option.addEventListener('click', () => {
+            modal.querySelectorAll('.icon-option').forEach(opt => opt.classList.remove('selected'));
+            option.classList.add('selected');
+        });
+    });
+}
+
+function saveIcon(index, button) {
+    const modal = button.closest('.modal');
+    const selectedIcon = modal.querySelector('.icon-option.selected');
+    if (selectedIcon) {
+        selectedApps[index].icon = selectedIcon.dataset.icon;
+        updateSelectedAppsList();
+    }
+    modal.remove();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -152,299 +453,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error publishing preview:', error);
             alert('Failed to publish preview. Please try again.');
         }
-    }
-
-    async function loadAvailableApps() {
-        try {
-            const response = await fetch(`${API_URL}/api/gallery`);
-            if (!response.ok) {
-                throw new Error('Failed to fetch micro-apps');
-            }
-            availableApps = await response.json();
-            console.log('Loaded apps:', availableApps); // Debug log
-        } catch (error) {
-            console.error('Error loading available apps:', error);
-            availableApps = [];
-        }
-    }
-
-    function openAppSelector() {
-        const modal = document.getElementById('appSelectorModal');
-        const appGrid = document.getElementById('appGrid');
-        
-        // Clear previous content
-        appGrid.innerHTML = '';
-        
-        // Add available apps to the grid
-        availableApps.forEach(app => {
-            const card = document.createElement('div');
-            card.className = 'app-card';
-            if (selectedApps.some(selected => selected._id === app._id)) {
-                card.classList.add('selected');
-            }
-            
-            card.innerHTML = `
-                <h3>${app.title}</h3>
-                <p>${app.description.substring(0, 50)}...</p>
-            `;
-            
-            card.addEventListener('click', () => toggleAppSelection(card, app));
-            appGrid.appendChild(card);
-        });
-        
-        modal.style.display = 'block';
-    }
-
-    function toggleAppSelection(card, app) {
-        card.classList.toggle('selected');
-    }
-
-    function confirmAppSelection() {
-        const selectedCards = document.querySelectorAll('.app-card.selected');
-        selectedApps = Array.from(selectedCards).map(card => {
-            const appTitle = card.querySelector('h3').textContent;
-            const app = availableApps.find(app => app.title === appTitle);
-            console.log('Selected app:', app); // Debug log
-            return app;
-        });
-        
-        updateSelectedAppsList();
-        closeAppSelector();
-    }
-
-    function closeAppSelector() {
-        const modal = document.getElementById('appSelectorModal');
-        modal.style.display = 'none';
-    }
-
-    function updateSelectedAppsList() {
-        const selectedAppsList = document.getElementById('selectedAppsList');
-        selectedAppsList.innerHTML = '';
-        
-        selectedApps.forEach((app, index) => {
-            const appElement = document.createElement('div');
-            appElement.className = 'app-service';
-            appElement.innerHTML = `
-                <div class="service-icon">
-                    <i class="${app.icon || 'fas fa-cube'}"></i>
-                </div>
-                <div class="service-info">
-                    <h4>${app.title}</h4>
-                </div>
-                <div class="app-controls">
-                    <button class="app-control-btn edit" onclick="editAppIcon(${index})" title="Edit Icon">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="app-control-btn delete" onclick="deleteApp(${index})" title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            `;
-            selectedAppsList.appendChild(appElement);
-        });
-        
-        updatePreview();
-    }
-
-    function deleteApp(index) {
-        selectedApps.splice(index, 1);
-        updateSelectedAppsList();
-    }
-
-    function editAppIcon(index) {
-        const app = selectedApps[index];
-        const icons = [
-            // Common UI Icons
-            'fas fa-home',
-            'fas fa-cog',
-            'fas fa-user',
-            'fas fa-users',
-            'fas fa-bell',
-            'fas fa-search',
-            'fas fa-star',
-            'fas fa-heart',
-            
-            // Communication
-            'fas fa-envelope',
-            'fas fa-comment',
-            'fas fa-comments',
-            'fas fa-phone',
-            'fas fa-video',
-            'fas fa-share',
-            'fas fa-paper-plane',
-            'fas fa-inbox',
-            
-            // Content & Files
-            'fas fa-file',
-            'fas fa-file-alt',
-            'fas fa-folder',
-            'fas fa-image',
-            'fas fa-film',
-            'fas fa-music',
-            'fas fa-book',
-            'fas fa-bookmark',
-            
-            // Business & Analytics
-            'fas fa-chart-bar',
-            'fas fa-chart-line',
-            'fas fa-chart-pie',
-            'fas fa-briefcase',
-            'fas fa-calculator',
-            'fas fa-wallet',
-            'fas fa-dollar-sign',
-            'fas fa-euro-sign',
-            
-            // Time & Calendar
-            'fas fa-calendar',
-            'fas fa-clock',
-            'fas fa-hourglass',
-            'fas fa-stopwatch',
-            'fas fa-history',
-            'fas fa-calendar-alt',
-            'fas fa-bell-slash',
-            'fas fa-alarm-clock',
-            
-            // Tools & Settings
-            'fas fa-tools',
-            'fas fa-wrench',
-            'fas fa-sliders-h',
-            'fas fa-magic',
-            'fas fa-key',
-            'fas fa-lock',
-            'fas fa-shield-alt',
-            'fas fa-database',
-            
-            // Navigation & Location
-            'fas fa-map',
-            'fas fa-compass',
-            'fas fa-location-arrow',
-            'fas fa-globe',
-            'fas fa-map-marker-alt',
-            'fas fa-directions',
-            'fas fa-road',
-            'fas fa-car',
-            
-            // Social & Collaboration
-            'fas fa-thumbs-up',
-            'fas fa-handshake',
-            'fas fa-trophy',
-            'fas fa-medal',
-            'fas fa-crown',
-            'fas fa-gift',
-            'fas fa-award',
-            'fas fa-certificate',
-            
-            // Misc Apps
-            'fas fa-shopping-cart',
-            'fas fa-store',
-            'fas fa-camera',
-            'fas fa-gamepad',
-            'fas fa-puzzle-piece',
-            'fas fa-paint-brush',
-            'fas fa-palette',
-            'fas fa-cube'
-        ];
-        
-        // Create and show icon selector modal
-        const modal = document.createElement('div');
-        modal.className = 'modal icon-selector-modal';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>Select Icon</h3>
-                <div class="icon-grid">
-                    ${icons.map(icon => `
-                        <div class="icon-option ${icon === app.icon ? 'selected' : ''}" data-icon="${icon}">
-                            <i class="${icon}"></i>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="modal-actions">
-                    <button class="button" onclick="this.closest('.modal').remove()">Cancel</button>
-                    <button class="button primary" onclick="saveIcon(${index}, this)">Save</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        modal.style.display = 'block';
-        
-        // Add click handlers for icon selection
-        modal.querySelectorAll('.icon-option').forEach(option => {
-            option.addEventListener('click', () => {
-                modal.querySelectorAll('.icon-option').forEach(opt => opt.classList.remove('selected'));
-                option.classList.add('selected');
-            });
-        });
-    }
-
-    function saveIcon(index, button) {
-        const modal = button.closest('.modal');
-        const selectedIcon = modal.querySelector('.icon-option.selected');
-        if (selectedIcon) {
-            selectedApps[index].icon = selectedIcon.dataset.icon;
-            updateSelectedAppsList();
-        }
-        modal.remove();
-    }
-
-    function updatePreview() {
-        const appServices = document.getElementById('appServices');
-        appServices.innerHTML = '';
-        
-        selectedApps.forEach(app => {
-            const serviceElement = document.createElement('div');
-            serviceElement.className = 'app-service';
-            serviceElement.setAttribute('data-app-id', app._id);
-            serviceElement.innerHTML = `
-                <div class="service-icon">
-                    <i class="fas fa-${app.icon || 'cube'}"></i>
-                </div>
-                <div class="service-info">
-                    <h4>${app.title}</h4>
-                </div>
-            `;
-            
-            serviceElement.addEventListener('click', () => openMobileModal(app));
-            appServices.appendChild(serviceElement);
-        });
-    }
-
-    function openMobileModal(app) {
-        const modal = document.getElementById('mobileAppModal');
-        const title = document.getElementById('mobileModalTitle');
-        const body = document.getElementById('mobileModalBody');
-        const appServices = document.getElementById('appServices');
-        
-        console.log('Opening modal for app:', app); // Debug log
-        
-        title.textContent = app.title;
-        body.innerHTML = '';
-        
-        try {
-            // Create an AdaptiveCard instance
-            var adaptiveCard = new AdaptiveCards.AdaptiveCard();
-            
-            // Parse and render the card
-            adaptiveCard.parse(app.cardJson);
-            let renderedCard = adaptiveCard.render();
-            body.appendChild(renderedCard);
-        } catch (error) {
-            console.error('Error rendering card:', error);
-            body.innerHTML = `<p>Error rendering card: ${error.message}</p>`;
-        }
-        
-        // Hide app services and show modal
-        appServices.style.display = 'none';
-        modal.style.display = 'block';
-    }
-
-    function closeMobileModal() {
-        const modal = document.getElementById('mobileAppModal');
-        const appServices = document.getElementById('appServices');
-        
-        // Hide modal and show app services with animation
-        modal.style.display = 'none';
-        appServices.style.display = 'grid';
     }
 
     // Close mobile modal when clicking back button
