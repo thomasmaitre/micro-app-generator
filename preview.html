@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Preview - Micro App Generator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="styles.css?v=1702312012">
+    <script src="https://unpkg.com/adaptivecards@2.11.2/dist/adaptivecards.min.js"></script>
+</head>
+<body>
+    <nav class="main-navigation">
+        <div class="nav-logo">
+            <img src="https://res.cloudinary.com/vizir2/image/upload/v1732533463/Companion-icon_rw3nk3.png" alt="Logo" class="logo">
+            <span class="nav-title">LumApps Micro-apps</span>
+        </div>
+        <div class="nav-links">
+            <a href="index.html" class="nav-link">Generator</a>
+            <a href="gallery.html" class="nav-link">Gallery</a>
+            <a href="preview.html" class="nav-link active">Preview</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="container-index">
+        <div class="left-panel">
+            <h2>App Preview</h2>
+            
+            <div class="app-name-input">
+                <h3>App Name</h3>
+                <input type="text" id="appNameInput" placeholder="Enter your app name" value="My App">
+            </div>
+            
+            <div class="logo-upload">
+                <h3>App Logo</h3>
+                <label for="logoInput" class="logo-preview">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span>Drag & drop or click to upload</span>
+                </label>
+                <input type="file" id="logoInput" accept="image/*">
+            </div>
+
+            <div class="selected-apps">
+                <h3>Selected Micro-Apps</h3>
+                <div id="selectedAppsList" class="selected-apps-list">
+                    <!-- Selected apps will be listed here -->
+                </div>
+                <button class="add-app-btn" id="addAppBtn">
+                    <i class="fas fa-plus"></i> Add Micro-App
+                </button>
+                <button class="publish-btn" id="publishBtn">
+                    <i class="fas fa-share-alt"></i> Publish Preview
+                </button>
+            </div>
+        </div>
+
+        <div class="preview-panel">
+            <div id="previewFrame">
+                <div class="status-bar">
+                    <span class="time">12:30</span>
+                    <div class="status-icons">
+                        <i class="fas fa-signal"></i>
+                        <i class="fas fa-wifi"></i>
+                        <i class="fas fa-battery-full"></i>
+                    </div>
+                </div>
+                <div class="preview-header">
+                    <img id="previewLogo" src="/images/companion.svg" alt="App Logo">
+                    <span id="defaultAppName">My App</span>
+                </div>
+                <div class="preview-content">
+                    <div class="preview-title">
+                        <h2>Shortcuts</h2>
+                    </div>
+                    <div class="app-services" id="appServices">
+                        <!-- Services will be dynamically added here -->
+                    </div>
+                    <div class="mobile-app-modal" id="mobileAppModal">
+                        <div class="mobile-modal-content">
+                            <div class="mobile-modal-header">
+                                <button class="back-button" onclick="closeMobileModal()">
+                                    <i class="fas fa-arrow-left"></i>
+                                </button>
+                                <h3 id="mobileModalTitle"></h3>
+                            </div>
+                            <div class="mobile-modal-body" id="mobileModalBody">
+                                <!-- App content will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <div class="app-selector-modal" id="appSelectorModal">
+        <div class="modal-content">
+            <h2>Select Micro-Apps</h2>
+            <div class="app-grid" id="appGrid">
+                <!-- Available apps will be loaded here -->
+            </div>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="button" onclick="closeAppSelector()">Cancel</button>
+                <button class="button primary" onclick="confirmAppSelection()">Add Selected</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="preview.js"></script>
+</body>
+</html>

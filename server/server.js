@@ -98,10 +98,11 @@ function setupRoutes() {
             '/api/gallery',
             '/api/categories',
             '/api/providers',
-            '/images/:id',
             '/api/micro-app/:id',
             '/api/upvote/:id',
-            '/api/generate-micro-app'
+            '/api/generate-micro-app',
+            '/publish-preview',
+            '/published-preview/:id'
         ];
         
         res.json({ 
@@ -499,37 +500,32 @@ function setupRoutes() {
         }
     });
 
-    // Serve images by ID
-    app.get('/images/:id', async (req, res) => {
+    // Endpoint to get a preview by ID
+    app.get('/preview/:id', async (req, res) => {
         try {
-            console.log('Received request for image with ID:', req.params.id);
-            const id = new ObjectId(req.params.id);
-            console.log('Looking for document with ID:', id);
-            
-            const microApp = await db.collection('images').findOne({ _id: id });
-            console.log('Found microApp:', microApp ? 'Yes' : 'No');
-            
-            if (!microApp || !microApp.image) {
-                console.log('Image not found or no image data');
-                return res.status(404).send('Image not found');
+            console.log('Preview request:', {
+                id: req.params.id,
+                headers: req.headers,
+                url: req.url,
+                path: req.path
+            });
+
+            const previewId = new ObjectId(req.params.id);
+            const preview = await db.collection('previews').findOne({ _id: previewId });
+            console.log('Found preview:', preview ? 'yes' : 'no');
+
+            if (!preview) {
+                return res.status(404).json({ error: 'Preview not found' });
             }
 
-            // Extract base64 data and remove the data URL prefix if present
-            let imageData = microApp.image;
-            if (imageData.includes(',')) {
-                imageData = imageData.split(',')[1];
-            }
+            return res.json(preview);
 
-            // Convert base64 to buffer
-            const buffer = Buffer.from(imageData, 'base64');
-            console.log('Successfully created image buffer');
-
-            // Set content type and send buffer
-            res.set('Content-Type', 'image/png');
-            res.send(buffer);
         } catch (error) {
-            console.error('Error serving image:', error);
-            res.status(500).send('Error serving image');
+            console.error('Error retrieving preview:', error);
+            res.status(500).json({ 
+                error: 'Failed to retrieve preview',
+                details: error.message 
+            });
         }
     });
 
@@ -844,6 +840,94 @@ type MicroAppFunctionActionSettings = {
                 error: 'Failed to generate micro-app',
                 details: error.message 
             });
+        }
+    });
+
+    app.post('/publish-preview', async (req, res) => {
+        try {
+            const { appName, logo, selectedApps, timestamp } = req.body;
+            
+            if (!appName || !selectedApps || !Array.isArray(selectedApps)) {
+                return res.status(400).json({ 
+                    error: 'App name and selected apps are required' 
+                });
+            }
+
+            // Generate a unique identifier for the preview
+            const previewId = new ObjectId();
+            
+            // Store the preview data in MongoDB
+            const preview = {
+                _id: previewId,
+                appName,
+                logo,
+                selectedApps,
+                timestamp,
+                createdAt: new Date()
+            };
+
+            await db.collection('previews').insertOne(preview);
+
+            // Generate the public URL
+            const publicUrl = process.env.NODE_ENV === 'production'
+                ? `https://thomasmaitre.github.io/micro-app-generator/published-preview/${previewId}`
+                : `http://localhost:8000/published-preview/${previewId}`;
+
+            res.json({ 
+                success: true, 
+                previewId: previewId.toString(),
+                publicUrl 
+            });
+
+        } catch (error) {
+            console.error('Error publishing preview:', error);
+            res.status(500).json({ 
+                error: 'Failed to publish preview',
+                details: error.message 
+            });
+        }
+    });
+
+    // Endpoint to get a published preview by ID
+    app.get('/published-preview/:id', async (req, res) => {
+        try {
+            console.log('Published preview request:', {
+                id: req.params.id,
+                headers: req.headers,
+                url: req.url,
+                path: req.path
+            });
+
+            // First check if this is an API request
+            const isApiRequest = req.headers.accept && req.headers.accept.includes('application/json');
+            console.log('Is API request:', isApiRequest);
+            
+            if (isApiRequest) {
+                const previewId = new ObjectId(req.params.id);
+                const preview = await db.collection('previews').findOne({ _id: previewId });
+                console.log('Found preview:', preview ? 'yes' : 'no');
+
+                if (!preview) {
+                    return res.status(404).json({ error: 'Preview not found' });
+                }
+
+                return res.json(preview);
+            }
+
+            // If it's not an API request, serve the HTML file
+            console.log('Serving HTML file');
+            res.sendFile('published-preview.html', { root: '../' });
+
+        } catch (error) {
+            console.error('Error in published-preview endpoint:', error);
+            if (req.headers.accept && req.headers.accept.includes('application/json')) {
+                res.status(500).json({ 
+                    error: 'Failed to retrieve preview',
+                    details: error.message 
+                });
+            } else {
+                res.status(500).send('Error loading preview');
+            }
         }
     });
 }

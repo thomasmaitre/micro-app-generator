@@ -277,6 +277,7 @@ button:disabled {
 
 #adaptiveCardContainer {
     background: transparent;
+    margin:20px;
 }
 
 /* Adaptive Card styling improvements */
@@ -1208,11 +1209,10 @@ input[type="color"]::-webkit-color-swatch {
     padding: 2rem;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    margin: 0;
 }
 
 .micro-app-cards {
+    flex: 1;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -1403,7 +1403,6 @@ input[type="color"]::-webkit-color-swatch {
     text-align: center;
     padding: 3rem;
     color: #666;
-    font-size: 1.1rem;
 }
 
 .error-message {
@@ -1528,4 +1527,995 @@ input[type="color"]::-webkit-color-swatch {
     max-height: 200px;
     overflow-y: auto;
     padding-right: 8px;
+}
+
+/* Preview Styles */
+.preview-container {
+    display: flex;
+    height: calc(100vh - 60px);
+    margin-top: 60px;
+}
+
+.preview-panel {
+    flex: 1;
+    padding: 20px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#previewFrame {
+    width: 375px;
+    height: 667px;
+    background: var(--bg-primary);
+    border: 12px solid #1a1a1a;
+    border-radius: 48px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* iPhone Notch */
+#previewFrame::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    height: 28px;
+    background: #1a1a1a;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    z-index: 10;
+}
+
+/* iPhone Home Indicator */
+#previewFrame::after {
+    content: '';
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 2px;
+    z-index: 10;
+}
+
+.preview-header {
+    padding: 35px 20px 10px 20px;
+    padding-top: 40px; /* Account for the notch */
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    background: var(--bg-primary);
+    position: relative;
+    z-index: 1;
+}
+
+.preview-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #f8f8f8;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+#appServices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+    padding: 15px;
+    width: 100%;
+    max-width: 100%;
+    overflow-y: auto;
+    box-sizing: border-box;
+    margin: 0 auto;
+}
+
+#previewAppsList {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+    padding: 15px;
+    width: 100%;
+    max-width: 100%;
+    overflow-y: auto;
+    box-sizing: border-box;
+    margin: 0 auto;
+}
+
+/* App Service Card */
+.app-service {
+    position: relative;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: left;
+    gap: 8px;
+    background: var(--bg-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.app-service:hover {
+    border-color: var(--button-bg);
+    background: var(--bg-secondary);
+    transform: translateY(-2px);
+}
+
+.app-service:active {
+    transform: translateY(0);
+}
+
+.service-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.service-icon i {
+    font-size: 24px;
+    color: var(--text-primary);
+}
+
+#mobileAppModal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: white;
+    z-index: 10;
+    display: none;
+    overflow-y: auto;
+}
+
+.preview-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+
+.service-info {
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 100px;
+    flex: 1;
+    min-width: 0;
+}
+
+.service-info h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    overflow: hidden;
+    width: 100%; /* Adjust as necessary to fit your layout */
+    text-align: left;
+}
+
+.service-info img {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 8px;
+    object-fit: contain;
+}
+
+
+#mobileAppModal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: white;
+    z-index: 10;
+    display: none;
+    overflow-y: auto;
+}
+
+/* Mobile App Modal */
+.mobile-app-modal {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-primary);
+    z-index: 2;
+}
+
+.mobile-modal-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.mobile-modal-header {
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: var(--bg-primary);
+}
+
+.back-button {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.back-button:hover {
+    background: var(--bg-secondary);
+}
+
+#mobileModalTitle {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.modal-body {
+    max-height: calc(100vh - 200px); /* Adjust based on header/footer height */
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.mobile-modal-body {
+    max-height: calc(100vh - 160px); /* Adjust for mobile header */
+    overflow-y: auto;
+    padding: 16px;
+}
+
+/* Logo Upload Styles */
+.logo-upload {
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.logo-upload h3 {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.logo-preview {
+    width: 100%;
+    height: 120px;
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.logo-preview:hover {
+    border-color: var(--button-bg);
+    background-color: var(--bg-secondary);
+}
+
+.logo-preview i {
+    font-size: 24px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.logo-preview span {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.logo-preview.has-image {
+    border-style: solid;
+    background-color: white;
+}
+
+.logo-preview.has-image i,
+.logo-preview.has-image span {
+    display: none;
+}
+
+.logo-preview.dragover {
+    border-color: var(--button-bg);
+    background-color: var(--bg-secondary);
+    border-style: solid;
+}
+
+/* Hide the actual file input but keep it accessible */
+#logoInput {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    border: 0;
+}
+
+.selected-apps {
+    margin-top: 20px;
+}
+
+.app-item {
+    background: white;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.app-item .remove-app {
+    color: #ff4444;
+    cursor: pointer;
+}
+
+.add-app-btn {
+    width: 100%;
+    padding: 10px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.add-app-btn:hover {
+    background: #45a049;
+}
+
+.app-selector-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.app-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.gallery-container {
+    background-color: #f7f7f7;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.gallery-title {
+    text-align: left;
+    margin: 0 0 20px 0;
+}
+
+.filters-container {
+    margin-bottom: 20px;
+}
+
+.filter-tag {
+    background-color: #e0e0e0;
+    padding: 5px 10px;
+    border-radius: 5px;
+    margin: 5px;
+    display: inline-block;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.filter-tag:hover {
+    background-color: #d0d0d0;
+}
+
+.filter-tag.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    overflow-y: auto;
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 50px auto;
+    width: 90%;
+    max-width: 1000px;
+    border-radius: 10px;
+    position: relative;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.close-button {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.3s;
+}
+
+.close-button:hover {
+    color: #333;
+}
+
+.modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.modal-left {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-image {
+    max-width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.modal-right {
+    padding: 20px;
+}
+
+.modal-title {
+    font-size: 24px;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.modal-description {
+    color: #666;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.modal-metadata {
+    margin-bottom: 30px;
+}
+
+.metadata-section {
+    margin-bottom: 20px;
+}
+
+.metadata-section h3 {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tag-container .tag {
+    background-color: #f0f0f0;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 14px;
+    color: #666;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.modal-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+}
+
+.modal-button i {
+    font-size: 16px;
+}
+
+.modal-button:not(.primary) {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.modal-button.primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.modal-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.modal-button:not(.primary):hover {
+    background-color: #e0e0e0;
+}
+
+.modal-button.primary:hover {
+    background-color: #0056b3;
+}
+
+@media (max-width: 768px) {
+    .modal-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-content {
+        margin: 20px;
+        width: auto;
+    }
+}
+
+.card-content h3 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 1.2em;
+}
+
+.app-card {
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--bg-primary);
+}
+
+.app-card:hover {
+    border-color: var(--button-bg);
+    background: var(--bg-secondary);
+}
+
+.app-card.selected {
+    border-color: var(--button-bg);
+    background: var(--bg-secondary);
+    position: relative;
+}
+
+.app-card.selected::after {
+    content: '\f00c';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: var(--button-bg);
+}
+
+.service-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: 10px;
+}
+
+.service-icon i {
+    font-size: 20px;
+    color: var(--text-primary);
+}
+
+#previewLogo {
+    max-height: 28px;
+    width: auto;
+    object-fit: contain;
+    margin-right: 10px;
+}
+
+.preview-panel {
+    flex: 1;
+    padding: 20px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#previewFrame {
+    width: 375px;
+    height: 667px;
+    background: var(--bg-primary);
+    border: 12px solid #1a1a1a;
+    border-radius: 48px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* iPhone Notch */
+#previewFrame::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    height: 28px;
+    background: #1a1a1a;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    z-index: 10;
+}
+
+/* iPhone Home Indicator */
+#previewFrame::after {
+    content: '';
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 2px;
+    z-index: 10;
+}
+
+#defaultAppName {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Selected Apps List Styles */
+.selected-apps-list .app-service {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    position: relative;
+}
+
+.selected-apps-list .app-service:hover {
+    border-color: var(--button-bg);
+}
+
+.selected-apps-list .service-icon {
+    width: 32px;
+    height: 32px;
+}
+
+/* App Controls */
+.app-controls {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.selected-apps-list .app-service:hover .app-controls {
+    opacity: 1;
+}
+
+.app-control-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+}
+
+.app-control-btn:hover {
+    color: var(--button-bg);
+}
+
+.app-control-btn.delete:hover {
+    color: #dc3545;
+}
+
+/* Ensure the service info doesn't overlap with controls */
+.selected-apps-list .service-info {
+    padding-right: 80px;
+}
+
+/* Icon Selector Modal */
+.icon-selector-modal .modal-content {
+    max-width: 500px;
+    padding: 24px;
+}
+
+.icon-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.icon-option {
+    width: 48px;
+    height: 48px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.icon-option:hover {
+    border-color: var(--button-bg);
+    background: var(--bg-secondary);
+}
+
+.icon-option.selected {
+    border-color: var(--button-bg);
+    background: var(--button-bg);
+    color: white;
+}
+
+.icon-option i {
+    font-size: 20px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+/* General Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.app-name-input {
+    margin-bottom: 24px;
+}
+
+.app-name-input h3 {
+    margin-bottom: 8px;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.app-name-input input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    transition: border-color 0.2s ease;
+}
+
+.app-name-input input:focus {
+    outline: none;
+    border-color: var(--button-bg);
+}
+
+.app-name-input input::placeholder {
+    color: var(--text-secondary);
+}
+
+.status-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 5px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-primary);
+    font-size: 14px;
+    z-index: 2;
+}
+
+.status-bar .time {
+    margin: 0 0 0 10px;
+    font-weight: 500;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.status-bar .status-icons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.status-bar .status-icons i {
+    font-size: 12px;
+}
+
+.publish-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    width: 100%;
+    justify-content: center;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.publish-btn:hover {
+    background-color: #45a049;
+}
+
+.publish-btn i {
+    font-size: 16px;
+}
+
+/* Publish Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.url-container {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.url-container input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.copy-btn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.copy-btn:hover {
+    background-color: #0056b3;
+}
+
+.close-btn {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 10px;
+    transition: background-color 0.3s;
+}
+
+.close-btn:hover {
+    background-color: #5a6268;
 }

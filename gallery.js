@@ -123,8 +123,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Modal functionality
     const modal = document.getElementById('galleryCardModalDetails');
+    const jsonModal = document.getElementById('jsonModal');
     const closeButton = document.querySelector('.close-button');
     let currentAppId = null;
+
+    // Hide modals by default
+    if (modal) modal.style.display = 'none';
+    if (jsonModal) jsonModal.style.display = 'none';
 
     // Make openModal function globally available
     window.openModal = async function(appId) {

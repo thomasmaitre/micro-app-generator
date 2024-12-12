@@ -27,6 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedCategories = document.getElementById('selectedCategories');
     const selectedProviders = document.getElementById('selectedProviders');
 
+    // Ensure modals are hidden by default
+    if (publishModal) {
+        publishModal.style.display = 'none';
+    }
+
     // Initialize AdaptiveCards
     let adaptiveCard = new AdaptiveCards.AdaptiveCard();
     let currentCard = null;
@@ -186,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const emptyState = document.querySelector('.empty-state');
         
         if (!description) {
-            alert('Please provide a description for the card.');
+            showMessage('Please provide a description for the card.', 'error');
             return;
         }
 
@@ -216,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }, 10000); // Re-enable after 10 seconds
             }
             
-            alert(errorMessage);
+            showMessage(errorMessage, 'error');
         } finally {
             // Reset button state
             generateBtn.disabled = false;
@@ -387,7 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 copyBtn.onclick = async () => {
                     try {
                         await navigator.clipboard.writeText(result.data.url);
-                        showMessage('Link copied to clipboard! ', 'success');
                         copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
                         setTimeout(() => {
                             copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
@@ -396,7 +400,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Fallback for older browsers
                         input.select();
                         document.execCommand('copy');
-                        showMessage('Link copied to clipboard! ', 'success');
+                        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                        setTimeout(() => {
+                            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                        }, 2000);
                     }
                 };
                 
@@ -521,21 +528,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Initialize modal functionality
-    document.querySelectorAll('.modal-close').forEach(btn => {
-        btn.onclick = () => {
-            publishModal.style.display = 'none';
-        };
+    document.querySelectorAll('.modal-close, .close').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+
+    // Initialize copy button functionality
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const textToCopy = this.closest('.modal').querySelector('input, textarea')?.value;
+            if (textToCopy) {
+                try {
+                    await navigator.clipboard.writeText(textToCopy);
+                    this.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                    setTimeout(() => {
+                        this.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                    }, 2000);
+                } catch (err) {
+                    // Fallback for older browsers
+                    const input = this.closest('.modal').querySelector('input, textarea');
+                    input.select();
+                    document.execCommand('copy');
+                }
+            }
+        });
     });
 
     // Close modal when clicking outside
     window.onclick = function(event) {
-        if (event.target === publishModal) {
-            publishModal.style.display = 'none';
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = 'none';
         }
-    };
+    }
 
-    // Add click event for publish button
-    publishBtn.addEventListener('click', openPublishModal);
+    // Add click event for publish button if it exists
+    if (publishBtn) {
+        publishBtn.addEventListener('click', openPublishModal);
+    }
 
     // Initialize tag containers
     function initializeTagSystem() {
@@ -772,34 +805,73 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Download as PNG
-    downloadBtn.addEventListener('click', () => {
-        domtoimage.toPng(document.getElementById('microApp'))
-            .then((dataUrl) => {
-                const link = document.createElement('a');
-                link.download = 'micro-app.png';
-                link.href = dataUrl;
-                link.click();
-            })
-            .catch((error) => {
-                console.error('Error generating PNG:', error);
-            });
-    });
-
     // Get Shareable Link
     shareBtn.addEventListener('click', async () => {
         try {
             const dataUrl = await domtoimage.toPng(document.getElementById('microApp'));
             const response = await fetch(`${API_URL}/upload-image`, {
                 method: 'POST',
-                body: JSON.stringify({ imageData: dataUrl.split(',')[1] }),
                 headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imageData: dataUrl.split(',')[1] })
             });
             const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to upload image');
+            }
+            
             if (result.success) {
-                alert('Shareable link: ' + result.data.url);
-            } else {
-                alert('Failed to get shareable link.');
+                // Create and show modal
+                const modal = document.createElement('div');
+                modal.className = 'modal link-modal';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <span class="close">&times;</span>
+                        <h2>Shareable Link</h2>
+                        <div class="url-container">
+                            <input type="text" value="${result.data.url}" readonly>
+                            <button id="copyLinkBtn">
+                                <i class="fas fa-copy"></i>
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                const closeBtn = modal.querySelector('.close');
+                const copyBtn = modal.querySelector('#copyLinkBtn');
+                const input = modal.querySelector('input');
+                
+                // Close button handler
+                closeBtn.onclick = () => {
+                    document.body.removeChild(modal);
+                };
+                
+                // Copy button handler
+                copyBtn.onclick = async () => {
+                    try {
+                        await navigator.clipboard.writeText(result.data.url);
+                        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                        setTimeout(() => {
+                            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                        }, 2000);
+                    } catch (err) {
+                        // Fallback for older browsers
+                        input.select();
+                        document.execCommand('copy');
+                    }
+                };
+                
+                // Click outside to close
+                modal.onclick = (event) => {
+                    if (event.target === modal) {
+                        document.body.removeChild(modal);
+                    }
+                };
+                
+                modal.style.display = 'flex';
+                input.select(); // Select the URL for easy copying
             }
         } catch (error) {
             console.error('Error getting shareable link:', error);

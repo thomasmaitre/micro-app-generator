@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Published Preview - Micro App Generator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="published-preview.css">
+    <script src="https://unpkg.com/adaptivecards@2.11.2/dist/adaptivecards.min.js"></script>
+</head>
+<body>
+    <nav class="main-navigation">
+        <div class="nav-logo">
+            <img src="https://res.cloudinary.com/vizir2/image/upload/v1732533463/Companion-icon_rw3nk3.png" alt="Logo" class="logo">
+            <span class="nav-title">LumApps Micro-apps</span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Generator</a>
+            <a href="/gallery" class="nav-link">Gallery</a>
+            <a href="/preview" class="nav-link">Preview</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="container-index">
+            <div class="left-panel">
+                <h2 id="appTitle">Loading Preview...</h2>
+                
+                <div class="app-info">
+                    <div class="app-logo">
+                        <img id="appLogo" src="" alt="App Logo" style="display: none;">
+                    </div>
+                    <div class="published-date">
+                        Published: <span id="publishDate"></span>
+                    </div>
+                </div>
+
+                <div class="preview-description" id="appDescription"></div>
+            </div>
+
+            <div class="right-panel">
+                <div class="phone-preview">
+                    <div class="phone-frame">
+                        <div class="status-bar">
+                            <div class="status-time"></div>
+                            <div class="status-icons">
+                                <i class="fas fa-signal"></i>
+                                <i class="fas fa-wifi"></i>
+                                <i class="fas fa-battery-full"></i>
+                            </div>
+                        </div>
+                        <div class="phone-content" id="previewContent">
+                            <!-- Preview content will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get the preview ID from the URL
+        const pathParts = window.location.pathname.split('/');
+        const previewId = pathParts[pathParts.length - 1];
+        
+        // Always use port 3000 for API calls
+        const API_URL = 'http://localhost:3000';
+
+        // Function to format date
+        function formatDate(dateString) {
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit', 
+                minute: '2-digit'
+            };
+            return new Date(dateString).toLocaleDateString('en-US', options);
+        }
+
+        // Function to update the status bar time
+        function updateStatusBarTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true 
+            });
+            document.querySelector('.status-time').textContent = timeString;
+        }
+
+        // Load and display the preview
+        async function loadPreview() {
+            try {
+                const apiUrl = `${API_URL}/preview/${previewId}`;
+                console.log('Fetching from:', apiUrl);
+                
+                const response = await fetch(apiUrl, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Preview data:', data);
+
+                // Update the title
+                document.getElementById('appTitle').textContent = data.title || 'My App';
+
+                // Update the logo if it exists
+                const logoImg = document.getElementById('appLogo');
+                if (data.logo) {
+                    logoImg.src = data.logo;
+                    logoImg.style.display = 'block';
+                }
+
+                // Update the publish date
+                const publishDate = document.getElementById('publishDate');
+                publishDate.textContent = formatDate(data.publishedAt || new Date());
+
+                // Update the description
+                const description = document.getElementById('appDescription');
+                description.textContent = data.description || '';
+
+                // Update the preview content
+                const previewContent = document.getElementById('previewContent');
+                if (data.previewContent) {
+                    previewContent.innerHTML = data.previewContent;
+                }
+
+            } catch (error) {
+                console.error('Error loading preview:', error);
+                document.getElementById('appTitle').textContent = 'Error loading preview';
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPreview();
+            updateStatusBarTime();
+            // Update time every minute
+            setInterval(updateStatusBarTime, 60000);
+        });
+    </script>
+</body>
+</html>
