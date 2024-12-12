@@ -26,6 +26,8 @@ app.use(express.static('./', {
 // Handle published preview routes
 app.get('/published-preview/:id', async (req, res) => {
     const previewId = req.params.id;
+    console.log('Generating preview for ID:', previewId);
+    
     const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -108,12 +110,18 @@ app.get('/published-preview/:id', async (req, res) => {
     try {
         // Ensure the published-preview directory exists
         const previewDir = path.join(__dirname, 'published-preview');
+        console.log('Creating directory:', previewDir);
         await fs.mkdir(previewDir, { recursive: true });
 
         // Write the HTML file
         const filePath = path.join(previewDir, `${previewId}.html`);
-        await fs.writeFile(filePath, html);
-        console.log(`Preview file written to: ${filePath}`);
+        console.log('Writing file to:', filePath);
+        await fs.writeFile(filePath, html, 'utf8');
+        console.log('Successfully wrote file');
+
+        // List directory contents to confirm
+        const files = await fs.readdir(previewDir);
+        console.log('Directory contents:', files);
 
         res.send(html);
     } catch (error) {
