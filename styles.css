@@ -1228,55 +1228,57 @@ input[type="color"]::-webkit-color-swatch {
 }
 
 /* Filter Styles */
-.filters-container {
-    margin: 20px 0;
+.filter-controls {
     padding: 15px;
     background-color: #f5f5f5;
-    border-radius: 8px;
-}
-
-.filter-section {
-    margin-bottom: 20px;
-}
-
-.filter-section:last-child {
-    margin-bottom: 0;
-}
-
-.filter-title {
-    font-size: 1.1em;
-    color: #333;
-    margin-bottom: 10px;
-}
-
-#category-filters,
-#provider-filters {
+    border-bottom: 1px solid #ddd;
     display: flex;
+    gap: 20px;
     flex-wrap: wrap;
-    gap: 8px;
 }
 
-.filter-tag {
-    display: inline-block;
-    padding: 6px 12px;
-    background-color: #fff;
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.filter-group label {
+    font-weight: 500;
+    color: #333;
+}
+
+.filter-group select {
+    padding: 8px;
     border: 1px solid #ddd;
-    border-radius: 20px;
-    color: #666;
-    font-size: 0.9em;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    border-radius: 4px;
+    background-color: white;
+    min-width: 150px;
+    font-size: 14px;
 }
 
-.filter-tag:hover {
+.app-meta {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.app-meta span {
+    padding: 2px 8px;
+    border-radius: 12px;
     background-color: #f0f0f0;
-    border-color: #ccc;
+    color: #666;
 }
 
-.filter-tag.active {
-    background-color: #4a90e2;
-    color: white;
-    border-color: #4a90e2;
+.app-meta .category {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.app-meta .provider {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
 }
 
 /* Ensure category and provider tags in cards maintain their style */
@@ -1957,11 +1959,12 @@ input[type="color"]::-webkit-color-swatch {
 .filter-tag {
     background-color: #e0e0e0;
     padding: 5px 10px;
-    border-radius: 5px;
+    border-radius: 25px;
     margin: 5px;
     display: inline-block;
     cursor: pointer;
     transition: background-color 0.3s;
+    font-size: 13px;
 }
 
 .filter-tag:hover {
@@ -1969,8 +1972,12 @@ input[type="color"]::-webkit-color-swatch {
 }
 
 .filter-tag.active {
-    background-color: #007bff;
+    background-color: #2c2f33;
     color: white;
+}
+
+.app-content p {
+    font-size: 12px;
 }
 
 .modal {
@@ -2518,4 +2525,12 @@ input[type="color"]::-webkit-color-swatch {
 
 .close-btn:hover {
     background-color: #5a6268;
+}
+
+.app-card .meta-info {
+    display: none;
+}
+
+.app-card .app-icon {
+    display: none;
 }

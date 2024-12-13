@@ -6,7 +6,7 @@
     <title>Published Preview - Micro App Generator</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
-    <link rel="stylesheet" href="published-preview.css">
+    <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/adaptivecards@2.11.2/dist/adaptivecards.min.js"></script>
 </head>
 <body>
@@ -16,136 +16,194 @@
             <span class="nav-title">LumApps Micro-apps</span>
         </div>
         <div class="nav-links">
-            <a href="/" class="nav-link">Generator</a>
-            <a href="/gallery" class="nav-link">Gallery</a>
-            <a href="/preview" class="nav-link">Preview</a>
+            <a href="index.html" class="nav-link">Generator</a>
+            <a href="gallery.html" class="nav-link">Gallery</a>
+            <a href="preview.html" class="nav-link">Preview</a>
         </div>
     </nav>
-
     <div class="container">
-        <div class="container-index">
-            <div class="left-panel">
-                <h2 id="appTitle">Loading Preview...</h2>
-                
-                <div class="app-info">
-                    <div class="app-logo">
-                        <img id="appLogo" src="" alt="App Logo" style="display: none;">
-                    </div>
-                    <div class="published-date">
-                        Published: <span id="publishDate"></span>
-                    </div>
-                </div>
-
-                <div class="preview-description" id="appDescription"></div>
-            </div>
-
-            <div class="right-panel">
-                <div class="phone-preview">
-                    <div class="phone-frame">
-                        <div class="status-bar">
-                            <div class="status-time"></div>
-                            <div class="status-icons">
-                                <i class="fas fa-signal"></i>
-                                <i class="fas fa-wifi"></i>
-                                <i class="fas fa-battery-full"></i>
-                            </div>
-                        </div>
-                        <div class="phone-content" id="previewContent">
-                            <!-- Preview content will be loaded here -->
+        <div id="preview-container">
+            <div class="preview-panel">
+                <div id="previewFrame">
+                    <div class="status-bar">
+                        <span class="time">12:30</span>
+                        <div class="status-icons">
+                            <i class="fas fa-signal"></i>
+                            <i class="fas fa-wifi"></i>
+                            <i class="fas fa-battery-full"></i>
                         </div>
                     </div>
+                    <div class="preview-header">
+                        <img id="previewLogo" src="" alt="App Logo" style="width: 40px; height: 40px; object-fit: contain;">
+                        <span id="defaultAppName"></span>
+                    </div>
+                    <!-- Preview content will be loaded here -->
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Get the preview ID from the URL
-        const pathParts = window.location.pathname.split('/');
-        const previewId = pathParts[pathParts.length - 1];
+        // Use localhost for development, railway for production
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:3000'
+            : 'https://web-production-72b3.up.railway.app';
         
-        // Always use port 3000 for API calls
-        const API_URL = 'http://localhost:3000';
-
-        // Function to format date
-        function formatDate(dateString) {
-            const options = { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit', 
-                minute: '2-digit'
-            };
-            return new Date(dateString).toLocaleDateString('en-US', options);
-        }
-
-        // Function to update the status bar time
-        function updateStatusBarTime() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: true 
-            });
-            document.querySelector('.status-time').textContent = timeString;
-        }
-
-        // Load and display the preview
         async function loadPreview() {
             try {
-                const apiUrl = `${API_URL}/preview/${previewId}`;
-                console.log('Fetching from:', apiUrl);
+                // Get the preview ID from the URL query parameter
+                const params = new URLSearchParams(window.location.search);
+                const previewId = params.get('id');
                 
-                const response = await fetch(apiUrl, {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
+                if (!previewId) {
+                    throw new Error('No preview ID provided');
+                }
 
+                const response = await fetch(`${API_URL}/published-preview/${previewId}`);
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error('Failed to fetch preview data');
                 }
 
                 const data = await response.json();
-                console.log('Preview data:', data);
-
-                // Update the title
-                document.getElementById('appTitle').textContent = data.title || 'My App';
-
-                // Update the logo if it exists
-                const logoImg = document.getElementById('appLogo');
-                if (data.logo) {
-                    logoImg.src = data.logo;
-                    logoImg.style.display = 'block';
+                if (!data || !data.previewHtml) {
+                    throw new Error('Invalid preview data');
                 }
 
-                // Update the publish date
-                const publishDate = document.getElementById('publishDate');
-                publishDate.textContent = formatDate(data.publishedAt || new Date());
-
-                // Update the description
-                const description = document.getElementById('appDescription');
-                description.textContent = data.description || '';
-
-                // Update the preview content
-                const previewContent = document.getElementById('previewContent');
-                if (data.previewContent) {
-                    previewContent.innerHTML = data.previewContent;
+                // Update logo and app name
+                const previewLogo = document.getElementById('previewLogo');
+                if (previewLogo && data.logo) {
+                    const cleanBase64Data = data.logo.replace(/^data:image\/(png|jpg|jpeg|gif);base64,/, '');
+                    previewLogo.src = `data:image/${data.logo.split(';')[0].split('/')[1]};base64,${cleanBase64Data}`;
                 }
+                const defaultAppName = document.getElementById('defaultAppName');
+                if (defaultAppName) {
+                    defaultAppName.textContent = data.appName;
+                }
+
+                // Insert the preview content
+                const previewFrame = document.getElementById('previewFrame');
+                if (previewFrame) {
+                    previewFrame.insertAdjacentHTML('beforeend', data.previewHtml);
+                }
+
+                // Initialize any dynamic elements
+                updateStatusBarTime();
+                setInterval(updateStatusBarTime, 60000);
+
+                // Set up modal functionality
+                setupModalHandlers();
+
+                // Initialize adaptive cards if present
+                initializeAdaptiveCards();
 
             } catch (error) {
                 console.error('Error loading preview:', error);
-                document.getElementById('appTitle').textContent = 'Error loading preview';
+                document.getElementById('preview-container').innerHTML = 
+                    `<p class="error-message">Error loading preview: ${error.message}</p>`;
             }
         }
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            loadPreview();
-            updateStatusBarTime();
-            // Update time every minute
-            setInterval(updateStatusBarTime, 60000);
-        });
+        function initializeAdaptiveCards() {
+            const modalBody = document.querySelector('#mobileModalBody');
+            if (modalBody && modalBody.hasAttribute('data-adaptive-card')) {
+                try {
+                    console.log('Found adaptive card data attribute');
+                    const cardJson = JSON.parse(modalBody.getAttribute('data-adaptive-card'));
+                    console.log('Parsed card JSON:', cardJson);
+                    
+                    const adaptiveCard = new AdaptiveCards.AdaptiveCard();
+                    adaptiveCard.parse(cardJson);
+                    console.log('Parsed adaptive card');
+                    
+                    // Clear existing content and render the card
+                    modalBody.innerHTML = '';
+                    const renderedCard = adaptiveCard.render();
+                    modalBody.appendChild(renderedCard);
+                    console.log('Rendered adaptive card');
+                } catch (error) {
+                    console.error('Error initializing adaptive card:', error);
+                }
+            } else {
+                console.log('No adaptive card data found in modal body');
+            }
+        }
+
+        function setupModalHandlers() {
+            // Add click handlers to all app services
+            const appServices = document.querySelectorAll('.app-service');
+            appServices.forEach(service => {
+                service.addEventListener('click', function() {
+                    const modal = document.getElementById('mobileAppModal');
+                    if (modal) {
+                        // Get the app ID and title
+                        const appId = service.getAttribute('data-app-id');
+                        const appTitle = service.getAttribute('data-title');
+                        
+                        // Update modal title
+                        const modalTitle = modal.querySelector('#mobileModalTitle');
+                        if (modalTitle) {
+                            modalTitle.textContent = appTitle;
+                        }
+                        
+                        // Hide all card containers
+                        const allContainers = modal.querySelectorAll('.app-card-container');
+                        allContainers.forEach(container => {
+                            container.style.display = 'none';
+                        });
+                        
+                        // Show the selected app's card
+                        const cardContainer = modal.querySelector(`.app-card-container[data-app-id="${appId}"]`);
+                        if (cardContainer) {
+                            cardContainer.style.display = 'block';
+                            
+                            // Check if we need to initialize the adaptive card
+                            if (cardContainer.hasAttribute('data-adaptive-card') && !cardContainer.querySelector('.ac-adaptiveCard')) {
+                                try {
+                                    const cardJson = JSON.parse(cardContainer.getAttribute('data-adaptive-card'));
+                                    const adaptiveCard = new AdaptiveCards.AdaptiveCard();
+                                    adaptiveCard.parse(cardJson);
+                                    const renderedCard = adaptiveCard.render();
+                                    
+                                    // Clear and add the new card
+                                    cardContainer.innerHTML = '';
+                                    cardContainer.appendChild(renderedCard);
+                                } catch (error) {
+                                    console.error('Error initializing adaptive card:', error);
+                                }
+                            }
+                        }
+                        
+                        modal.style.display = 'block';
+                    }
+                });
+            });
+
+            // Add back button handler
+            const backButton = document.querySelector('.back-button');
+            if (backButton) {
+                backButton.addEventListener('click', function() {
+                    const modal = document.getElementById('mobileAppModal');
+                    if (modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+            }
+        }
+
+        function updateStatusBarTime() {
+            const timeElement = document.querySelector('.status-bar .time');
+            if (timeElement) {
+                const now = new Date();
+                timeElement.textContent = now.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
+            }
+        }
+
+        // Load the preview when the page loads
+        window.addEventListener('DOMContentLoaded', loadPreview);
     </script>
 </body>
 </html>

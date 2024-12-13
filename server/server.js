@@ -19,7 +19,7 @@ app.use((req, res, next) => {
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
         ? ['https://thomasmaitre.github.io', 'https://thomasmaitre.github.io/micro-app-generator'] 
-        : ['http://localhost:8000'],
+        : ['http://localhost:8000', 'http://localhost:3000'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -47,14 +47,23 @@ let mongoClient;
 async function connectToDatabase() {
     try {
         console.log('Attempting to connect to MongoDB Atlas...');
+        console.log('Database Name:', dbName);
+        console.log('URI exists:', !!uri);
+        
         mongoClient = await MongoClient.connect(uri, { 
             useNewUrlParser: true, 
             useUnifiedTopology: true,
             retryWrites: true,
             w: 'majority'
         });
+        
         console.log('Connected to MongoDB Atlas successfully');
         db = mongoClient.db(dbName);
+        
+        // Test the connection by listing collections
+        const collections = await db.listCollections().toArray();
+        console.log('Available collections:', collections.map(c => c.name));
+        
         return mongoClient;
     } catch (error) {
         console.error('MongoDB Atlas connection error:', error);
@@ -113,7 +122,7 @@ function setupRoutes() {
             endpoints,
             corsOrigins: process.env.NODE_ENV === 'production' 
                 ? ['https://thomasmaitre.github.io', 'https://thomasmaitre.github.io/micro-app-generator'] 
-                : ['http://localhost:8000']
+                : ['http://localhost:8000', 'http://localhost:3000']
         });
     });
 
@@ -314,6 +323,20 @@ function setupRoutes() {
             const microApps = await collection.find({}).toArray();
             
             console.log('Found micro-apps:', microApps.length);
+            
+            // If no apps found, return an empty array with a default app
+            if (microApps.length === 0) {
+                console.log('No apps found, returning default app');
+                return res.json([{
+                    _id: 'default',
+                    title: 'Sample App',
+                    description: 'A sample micro-app',
+                    icon: 'fas fa-cube',
+                    categories: ['sample'],
+                    providers: ['default']
+                }]);
+            }
+            
             if (microApps.length > 0) {
                 console.log('Sample app:', {
                     id: microApps[0]._id,
@@ -326,13 +349,14 @@ function setupRoutes() {
             const processedApps = microApps.map(app => ({
                 ...app,
                 categories: app.categories || [],
-                providers: app.providers || []
+                providers: app.providers || [],
+                icon: app.icon || 'fas fa-cube'  // Ensure there's always an icon
             }));
             
             res.json(processedApps);
         } catch (error) {
-            console.error('Error fetching micro-apps:', error);
-            res.status(500).json({ error: 'Failed to fetch micro-apps' });
+            console.error('Error fetching gallery:', error);
+            res.status(500).json({ error: 'Failed to fetch gallery' });
         }
     });
 
@@ -847,194 +871,105 @@ type MicroAppFunctionActionSettings = {
 
     app.post('/publish-preview', async (req, res) => {
         try {
-            const { appName, logo, selectedApps, timestamp } = req.body;
-            const previewId = new ObjectId();
-            
-            // Create the preview HTML content
-            const htmlContent = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${appName} - Published Preview</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
-    <link rel="stylesheet" href="../styles.css">
-    <script src="https://unpkg.com/adaptivecards@2.11.2/dist/adaptivecards.min.js"></script>
-</head>
-<body>
-    <nav class="main-navigation">
-        <div class="nav-logo">
-            <img src="https://res.cloudinary.com/vizir2/image/upload/v1732533463/Companion-icon_rw3nk3.png" alt="Logo" class="logo">
-            <span class="nav-title">LumApps Micro-apps</span>
-        </div>
-        <div class="nav-links">
-            <a href="../index.html" class="nav-link">Generator</a>
-            <a href="../gallery.html" class="nav-link">Gallery</a>
-            <a href="../preview.html" class="nav-link">Preview</a>
-        </div>
-    </nav>
+            console.log('Received publish preview request:', {
+                body: req.body,
+                contentType: req.headers['content-type']
+            });
 
-    <div class="preview-panel">
-        <div id="previewFrame">
-            <div class="status-bar">
-                <span class="time">12:30</span>
-                <div class="status-icons">
-                    <i class="fas fa-signal"></i>
-                    <i class="fas fa-wifi"></i>
-                    <i class="fas fa-battery-full"></i>
-                </div>
-            </div>
-            <div class="preview-header">
-                <img id="previewLogo" src="${logo}" alt="App Logo" class="preview-logo">
-                <h3 id="previewTitle" class="preview-title">${appName}</h3>
-            </div>
-            <div class="preview-content">
-                <div class="preview-title">
-                    <h2>Shortcuts</h2>
-                </div>
-                <div id="previewAppsList" class="previewAppsList">
-                    ${selectedApps.map(app => `
-                        <div class="app-service" data-app-id="${app._id}">
-                            <div class="service-icon">
-                                <i class="${app.icon || 'fas fa-cube'}"></i>
-                            </div>
-                            <div class="service-info">
-                                <h4>${app.title}</h4>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="mobile-app-modal" id="mobileAppModal">
-                    <div class="mobile-modal-content">
-                        <div class="mobile-modal-header">
-                            <button class="back-button" onclick="closeMobileModal()">
-                                <i class="fas fa-arrow-left"></i>
-                            </button>
-                            <h3 id="mobileModalTitle"></h3>
-                        </div>
-                        <div class="modal-body">
-                            <div id="adaptiveCardContainer"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const selectedApps = ${JSON.stringify(selectedApps)};
-        
-        function updateTime() {
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            document.querySelector('.status-bar .time').textContent = \`\${hours}:\${minutes}\`;
-        }
-        
-        setInterval(updateTime, 60000);
-        updateTime();
-
-        function openMobileModal(app) {
-            const modal = document.getElementById('mobileAppModal');
-            const title = document.getElementById('mobileModalTitle');
-            const container = document.getElementById('adaptiveCardContainer');
+            const { appName, logo, selectedApps, timestamp, previewHtml } = req.body;
             
-            title.textContent = app.title;
-            container.innerHTML = '';
-            
-            try {
-                const adaptiveCard = new AdaptiveCards.AdaptiveCard();
-                adaptiveCard.parse(app.cardJson);
-                container.appendChild(adaptiveCard.render());
-            } catch (error) {
-                console.error('Error rendering card:', error);
-                container.innerHTML = \`<p>Error rendering card: \${error.message}</p>\`;
+            // Validate required fields
+            if (!appName) {
+                throw new Error('App name is required');
+            }
+            if (!previewHtml) {
+                throw new Error('Preview HTML is required');
             }
             
-            document.getElementById('previewAppsList').style.display = 'none';
-            modal.style.display = 'block';
-        }
-
-        function closeMobileModal() {
-            const modal = document.getElementById('mobileAppModal');
-            modal.style.display = 'none';
-            document.getElementById('previewAppsList').style.display = 'grid';
-        }
-
-        // Add click handlers to app services
-        document.querySelectorAll('.app-service').forEach(service => {
-            service.addEventListener('click', () => {
-                const appId = service.getAttribute('data-app-id');
-                const app = selectedApps.find(app => app._id === appId);
-                if (app) {
-                    openMobileModal(app);
-                }
+            // Ensure selectedApps is an array
+            const apps = Array.isArray(selectedApps) ? selectedApps : [];
+            
+            console.log('Extracted data:', {
+                appName,
+                logo: logo ? 'exists' : 'missing',
+                selectedAppsCount: apps.length,
+                timestamp,
+                previewHtmlLength: previewHtml ? previewHtml.length : 0
             });
-        });
-    </script>
-</body>
-</html>`;
 
-            // Ensure the published-preview directory exists
-            const previewDir = path.join(__dirname, '..', 'published-preview');
-            await fs.mkdir(previewDir, { recursive: true });
+            // Save to MongoDB
+            const preview = {
+                appName,
+                logo: logo || '',
+                selectedApps: apps,
+                previewHtml,
+                timestamp: timestamp || new Date().toISOString(),
+                createdAt: new Date()
+            };
 
-            // Write the HTML file
-            const filePath = path.join(previewDir, `${previewId}.html`);
-            await fs.writeFile(filePath, htmlContent);
+            console.log('Saving preview to MongoDB:', {
+                appName: preview.appName,
+                selectedAppsCount: preview.selectedApps.length,
+                hasHtml: !!preview.previewHtml,
+                previewHtmlLength: preview.previewHtml.length,
+                collectionName: 'previews'
+            });
 
-            // Return the public URL
-            const publicUrl = `https://thomasmaitre.github.io/micro-app-generator/published-preview/${previewId}.html`;
-            res.json({ success: true, publicUrl });
+            // Verify database connection
+            if (!db) {
+                console.error('Database connection not available');
+                throw new Error('Database connection not available');
+            }
 
+            // Get the previews collection
+            const previewsCollection = db.collection('previews');
+            console.log('Got previews collection');
+
+            // Insert the preview
+            const result = await previewsCollection.insertOne(preview);
+            console.log('Successfully saved preview with ID:', result.insertedId);
+
+            // Verify the insert by fetching the document
+            const savedPreview = await previewsCollection.findOne({ _id: result.insertedId });
+            console.log('Verified saved preview:', {
+                id: savedPreview._id,
+                appName: savedPreview.appName,
+                hasHtml: !!savedPreview.previewHtml,
+                previewHtmlLength: savedPreview.previewHtml.length
+            });
+
+            // Return the URL that points to our single preview.html with the ID as a query parameter
+            const baseUrl = process.env.NODE_ENV === 'production'
+                ? 'https://thomasmaitre.github.io/micro-app-generator'
+                : 'http://localhost:8000';
+            const publicUrl = `${baseUrl}/published-preview.html?id=${result.insertedId}`;
+
+            console.log('Generated public URL:', publicUrl);
+            res.json({ publicUrl });
         } catch (error) {
             console.error('Error publishing preview:', error);
-            res.status(500).json({ success: false, error: 'Failed to publish preview' });
+            res.status(500).json({ error: error.message || 'Failed to publish preview' });
         }
     });
 
     // Endpoint to get a published preview by ID
     app.get('/published-preview/:id', async (req, res) => {
         try {
-            console.log('Published preview request:', {
-                id: req.params.id,
-                headers: req.headers,
-                url: req.url,
-                path: req.path
-            });
-
-            // First check if this is an API request
-            const isApiRequest = req.headers.accept && req.headers.accept.includes('application/json');
-            console.log('Is API request:', isApiRequest);
+            console.log('Getting published preview:', req.params.id);
+            const previewId = new ObjectId(req.params.id);
+            const preview = await db.collection('previews').findOne({ _id: previewId });
             
-            if (isApiRequest) {
-                const previewId = new ObjectId(req.params.id);
-                const preview = await db.collection('previews').findOne({ _id: previewId });
-                console.log('Found preview:', preview ? 'yes' : 'no');
-
-                if (!preview) {
-                    return res.status(404).json({ error: 'Preview not found' });
-                }
-
-                return res.json(preview);
+            if (!preview) {
+                return res.status(404).json({ error: 'Preview not found' });
             }
 
-            // If it's not an API request, serve the HTML file
-            console.log('Serving HTML file');
-            res.sendFile('published-preview.html', { root: '../' });
-
+            res.json(preview);
         } catch (error) {
-            console.error('Error in published-preview endpoint:', error);
-            if (req.headers.accept && req.headers.accept.includes('application/json')) {
-                res.status(500).json({ 
-                    error: 'Failed to retrieve preview',
-                    details: error.message 
-                });
-            } else {
-                res.status(500).send('Error loading preview');
-            }
+            console.error('Error retrieving preview:', error);
+            res.status(500).json({ 
+                error: 'Failed to retrieve preview',
+                details: error.message 
+            });
         }
     });
 }

@@ -1,5 +1,5 @@
 // API URL based on environment
-const API_URL = window.location.hostname === 'localhost' 
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
     ? 'http://localhost:3000'
     : 'https://web-production-72b3.up.railway.app';
 
@@ -160,44 +160,132 @@ function closeMobileModal() {
 
 async function loadAvailableApps() {
     try {
-        const response = await fetch(`${API_URL}/api/gallery`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch micro-apps');
+        // Fetch apps, categories, and providers in parallel
+        const [appsResponse, categoriesResponse, providersResponse] = await Promise.all([
+            fetch(`${API_URL}/api/gallery`),
+            fetch(`${API_URL}/api/categories`),
+            fetch(`${API_URL}/api/providers`)
+        ]);
+
+        if (!appsResponse.ok || !categoriesResponse.ok || !providersResponse.ok) {
+            throw new Error('Failed to fetch data');
         }
-        availableApps = await response.json();
+
+        // Get the data from all responses
+        availableApps = await appsResponse.json();
+        const categories = await categoriesResponse.json();
+        const providers = await providersResponse.json();
+        
+        // Populate filter options
+        const categoryFilters = document.getElementById('category-filters');
+        const providerFilters = document.getElementById('provider-filters');
+        
+        if (categoryFilters && providerFilters) {
+            categoryFilters.innerHTML = '';
+            providerFilters.innerHTML = '';
+            
+            // Add category and provider options
+            categories.forEach(category => {
+                categoryFilters.appendChild(createFilterTag(category, category, 'category'));
+            });
+            
+            providers.forEach(provider => {
+                providerFilters.appendChild(createFilterTag(provider, provider, 'provider'));
+            });
+        }
+        
+        // Initial display of all apps
+        displayAvailableApps(availableApps);
     } catch (error) {
-        console.error('Error loading available apps:', error);
-        availableApps = [];
+        console.error('Error loading data:', error);
     }
 }
 
-function openAppSelector() {
-    const modal = document.getElementById('appSelectorModal');
+function createFilterTag(value, text, type) {
+    const tag = document.createElement('div');
+    tag.className = 'filter-tag';
+    tag.textContent = text;
+    tag.dataset.value = value;
+    tag.dataset.type = type;
+    
+    tag.addEventListener('click', () => {
+        const allTagsOfType = document.querySelectorAll(`.filter-tag[data-type="${type}"]`);
+        const wasActive = tag.classList.contains('active');
+        
+        // Remove active class from all tags of the same type
+        allTagsOfType.forEach(t => t.classList.remove('active'));
+        
+        // If the tag wasn't active before, make it active
+        // If it was active, leave all inactive (showing all)
+        if (!wasActive) {
+            tag.classList.add('active');
+        }
+        
+        // Filter apps
+        filterApps();
+    });
+    
+    return tag;
+}
+
+function filterApps() {
+    const selectedCategory = document.querySelector('.filter-tag[data-type="category"].active')?.dataset.value;
+    const selectedProvider = document.querySelector('.filter-tag[data-type="provider"].active')?.dataset.value;
+    
+    console.log('Filtering apps with:', { selectedCategory, selectedProvider });
+    
+    const filteredApps = availableApps.filter(app => {
+        // If no category is selected, show all categories
+        const categoryMatch = !selectedCategory || (app.categories && app.categories.includes(selectedCategory));
+        // If no provider is selected, show all providers
+        const providerMatch = !selectedProvider || (app.providers && app.providers.includes(selectedProvider));
+        
+        return categoryMatch && providerMatch;
+    });
+    
+    displayAvailableApps(filteredApps);
+}
+
+function displayAvailableApps(apps) {
     const appGrid = document.getElementById('appGrid');
+    if (!appGrid) {
+        console.error('App grid not found');
+        return;
+    }
     
-    if (!modal || !appGrid) return;
-    
-    // Clear previous content
+    console.log('Displaying apps:', apps);
     appGrid.innerHTML = '';
     
-    // Add available apps to the grid
-    availableApps.forEach(app => {
+    apps.forEach(app => {
         const card = document.createElement('div');
         card.className = 'app-card';
-        if (selectedApps.some(selected => selected._id === app._id)) {
+        if (selectedApps.some(selected => selected.title === app.title)) {
             card.classList.add('selected');
         }
         
         card.innerHTML = `
-            <h3>${app.title}</h3>
-            <p>${app.description?.substring(0, 50) || ''}...</p>
+            <div class="app-content">
+                <h3>${app.title}</h3>
+                <p>${app.description}</p>
+            </div>
         `;
         
         card.addEventListener('click', () => toggleAppSelection(card, app));
         appGrid.appendChild(card);
     });
-    
-    modal.style.display = 'block';
+}
+
+function openAppSelector() {
+    const modal = document.getElementById('appSelectorModal');
+    if (modal) {
+        modal.style.display = 'block';
+        // Load apps if not already loaded
+        if (availableApps.length === 0) {
+            loadAvailableApps();
+        } else {
+            displayAvailableApps(availableApps);
+        }
+    }
 }
 
 function editAppIcon(index) {
@@ -340,131 +428,241 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up logo upload functionality
     const logoPreview = document.querySelector('.logo-preview');
     const logoInput = document.getElementById('logoInput');
-    const previewLogo = document.getElementById('previewLogo');
-    const defaultAppName = document.getElementById('defaultAppName');
-
-    // Set up app name input
-    const appNameInput = document.getElementById('appNameInput');
-    appNameInput.addEventListener('input', function(e) {
-        defaultAppName.textContent = e.target.value || 'My App';
-    });
-
-    // Handle drag and drop
-    logoPreview.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        logoPreview.classList.add('dragover');
-    });
-
-    logoPreview.addEventListener('dragleave', () => {
-        logoPreview.classList.remove('dragover');
-    });
-
-    logoPreview.addEventListener('drop', (e) => {
-        e.preventDefault();
-        logoPreview.classList.remove('dragover');
-        const file = e.dataTransfer.files[0];
-        if (file) {
-            handleLogoFile(file);
-        }
-    });
     
-    logoInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            handleLogoFile(file);
-        }
-    });
-
-    function handleLogoFile(file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            logoPreview.style.backgroundImage = `url(${e.target.result})`;
-            logoPreview.classList.add('has-image');
-            previewLogo.src = e.target.result;
-            previewLogo.style.display = 'block';
-            defaultAppName.style.display = 'none';
-        };
-        reader.readAsDataURL(file);
+    if (logoInput && logoPreview) {
+        logoInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                handleLogoFile(file);
+            }
+        });
+        
+        // Set up drag and drop for logo
+        logoPreview.addEventListener('dragover', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.classList.add('dragging');
+        });
+        
+        logoPreview.addEventListener('dragleave', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.classList.remove('dragging');
+        });
+        
+        logoPreview.addEventListener('drop', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.classList.remove('dragging');
+            
+            const file = event.dataTransfer.files[0];
+            if (file) {
+                handleLogoFile(file);
+            }
+        });
     }
-
+    
     // Set up add app button
-    document.getElementById('addAppBtn').addEventListener('click', openAppSelector);
-
-    // Load available apps from the gallery
-    loadAvailableApps();
-
-    // Update preview time
-    function updatePreviewTime() {
-        const now = new Date();
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        document.querySelector('.status-bar .time').textContent = `${hours}:${minutes}`;
+    const addAppBtn = document.getElementById('addAppBtn');
+    if (addAppBtn) {
+        addAppBtn.addEventListener('click', openAppSelector);
     }
-
+    
+    // Set up publish button
+    const publishBtn = document.getElementById('publishBtn');
+    if (publishBtn) {
+        publishBtn.addEventListener('click', publishPreview);
+    }
+    
     // Update time immediately and then every minute
     updatePreviewTime();
     setInterval(updatePreviewTime, 60000);
+});
 
-    // Set up publish button
-    document.getElementById('publishBtn').addEventListener('click', publishPreview);
+function handleLogoFile(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        logoPreview.style.backgroundImage = `url(${e.target.result})`;
+        logoPreview.classList.add('has-image');
+        previewLogo.src = e.target.result;
+        previewLogo.style.display = 'block';
+        defaultAppName.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+}
 
-    async function publishPreview() {
-        try {
-            const previewData = {
-                appName: document.getElementById('appNameInput').value,
-                logo: document.querySelector('.logo-preview').style.backgroundImage,
-                selectedApps: selectedApps,
-                timestamp: new Date().toISOString()
-            };
+function updatePreviewTime() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    document.querySelector('.status-bar .time').textContent = `${hours}:${minutes}`;
+}
 
-            const response = await fetch(`${API_URL}/publish-preview`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(previewData)
-            });
+async function publishPreview() {
+    try {
+        const appName = document.getElementById('appNameInput').value;
+        if (!appName) {
+            alert('Please enter an app name');
+            return;
+        }
 
-            if (!response.ok) {
-                throw new Error('Failed to publish preview');
+        const previewLogo = document.getElementById('previewLogo');
+        let logoData = '';
+        if (previewLogo) {
+            logoData = previewLogo.src;
+            // Extract just the base64 data from url("data:image/...")
+            if (logoData) {
+                logoData = logoData.replace(/^url\("(.+)"\)$/, '$1');
             }
+        }
 
-            const { publicUrl } = await response.json();
+        // Get the preview HTML content
+        const previewContent = document.querySelector('.preview-content');
+        if (!previewContent) {
+            throw new Error('Preview content not found');
+        }
+
+        // Clone the preview content
+        const previewClone = previewContent.cloneNode(true);
+
+        // Make sure the mobile app modal is included and properly initialized
+        const modalInPreview = previewClone.querySelector('#mobileAppModal');
+        if (modalInPreview) {
+            modalInPreview.style.display = 'none';
             
-            // Create a modal to show the public URL
-            const modal = document.createElement('div');
-            modal.className = 'modal';
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <h3>Preview Published!</h3>
-                    <p>Your preview is now available at:</p>
-                    <div class="url-container">
-                        <input type="text" value="${publicUrl}" readonly>
-                        <button onclick="copyUrl(this)" class="copy-btn">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                    <button onclick="closePublishModal(this)" class="close-btn">Close</button>
+            // Pre-render all adaptive cards for each selected app
+            const cloneModalBody = modalInPreview.querySelector('#mobileModalBody');
+            const cloneModalTitle = modalInPreview.querySelector('#mobileModalTitle');
+            
+            if (cloneModalBody && cloneModalTitle) {
+                // Store all app cards in the modal body
+                selectedApps.forEach(app => {
+                    if (app.cardJson) {
+                        try {
+                            // Create a container for this app's card
+                            const cardContainer = document.createElement('div');
+                            cardContainer.className = 'app-card-container';
+                            cardContainer.setAttribute('data-app-id', app._id);
+                            cardContainer.style.display = 'none'; // Hide by default
+                            
+                            // Store the card JSON
+                            cardContainer.setAttribute('data-adaptive-card', JSON.stringify(app.cardJson));
+                            
+                            // Pre-render the card
+                            const adaptiveCard = new AdaptiveCards.AdaptiveCard();
+                            adaptiveCard.parse(app.cardJson);
+                            const renderedCard = adaptiveCard.render();
+                            cardContainer.appendChild(renderedCard);
+                            
+                            // Add to modal body
+                            cloneModalBody.appendChild(cardContainer);
+                            
+                            console.log('Pre-rendered card for app:', app.title);
+                        } catch (error) {
+                            console.error('Error pre-rendering card for app:', app.title, error);
+                        }
+                    }
+                });
+
+                // Update the click handlers to show/hide appropriate cards
+                const appServices = previewClone.querySelectorAll('.app-service');
+                appServices.forEach(service => {
+                    const appId = service.getAttribute('data-app-id');
+                    const app = selectedApps.find(a => a._id === appId);
+                    if (app) {
+                        service.setAttribute('data-title', app.title);
+                    }
+                });
+            }
+        }
+
+        const previewHtml = previewClone.outerHTML;
+        console.log('Preview HTML:', {
+            length: previewHtml.length,
+            hasModal: previewHtml.includes('mobileAppModal'),
+            hasAdaptiveCard: previewHtml.includes('data-adaptive-card'),
+            modalContent: modalInPreview ? modalInPreview.innerHTML : 'no modal'
+        });
+
+        const previewData = {
+            appName,
+            logo: logoData,
+            selectedApps: selectedApps || [],
+            timestamp: new Date().toISOString(),
+            previewHtml
+        };
+
+        console.log('Publishing preview with data:', {
+            appName: previewData.appName,
+            hasLogo: !!previewData.logo,
+            selectedAppsCount: previewData.selectedApps.length,
+            timestamp: previewData.timestamp,
+            previewHtmlLength: previewHtml.length,
+            hasModal: !!modalInPreview,
+            apiUrl: `${API_URL}/publish-preview`
+        });
+
+        console.log('Full preview data:', previewData);
+
+        const response = await fetch(`${API_URL}/publish-preview`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(previewData)
+        });
+
+        console.log('Server response status:', response.status);
+
+        if (!response.ok) {
+            const error = await response.json();
+            console.error('Server error:', error);
+            throw new Error(error.error || 'Failed to publish preview');
+        }
+
+        const result = await response.json();
+        console.log('Server response:', result);
+
+        const { publicUrl } = result;
+        
+        // Create a modal to show the public URL
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>Preview Published!</h3>
+                <p>Your preview is now available at:</p>
+                <div class="url-container">
+                    <input type="text" value="${publicUrl}" readonly>
+                    <button onclick="copyUrl(this)" class="copy-btn">
+                        <i class="fas fa-copy"></i>
+                    </button>
                 </div>
-            `;
-            document.body.appendChild(modal);
-            modal.style.display = 'block';
-        } catch (error) {
-            console.error('Error publishing preview:', error);
-            alert('Failed to publish preview. Please try again.');
-        }
+                <button onclick="closePublishModal(this)" class="close-btn">Close</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.style.display = 'block';
+
+        // Open the preview in a new tab
+        window.open(publicUrl, '_blank');
+    } catch (error) {
+        console.error('Error publishing preview:', error);
+        alert(error.message || 'Failed to publish preview. Please try again.');
     }
+}
 
-    // Close mobile modal when clicking back button
-    document.querySelector('.back-button').addEventListener('click', function(event) {
-        event.preventDefault();
+document.getElementById('publishBtn').addEventListener('click', publishPreview);
+
+// Close mobile modal when clicking back button
+document.querySelector('.back-button').addEventListener('click', function(event) {
+    event.preventDefault();
+    closeMobileModal();
+});
+
+// Close mobile modal when clicking outside
+document.getElementById('mobileAppModal').addEventListener('click', function(event) {
+    if (event.target === this) {
         closeMobileModal();
-    });
-
-    // Close mobile modal when clicking outside
-    document.getElementById('mobileAppModal').addEventListener('click', function(event) {
-        if (event.target === this) {
-            closeMobileModal();
-        }
-    });
+    }
 });

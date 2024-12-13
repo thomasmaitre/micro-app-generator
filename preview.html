@@ -95,11 +95,26 @@
         </div>
     </div>
 
-    <div class="app-selector-modal" id="appSelectorModal">
+    <div id="appSelectorModal" class="modal" style="display: none;">
         <div class="modal-content">
-            <h2>Select Micro-Apps</h2>
-            <div class="app-grid" id="appGrid">
-                <!-- Available apps will be loaded here -->
+            <div class="modal-header">
+                <h2>Select Micro-Apps</h2>
+                <button class="close-button" onclick="closeAppSelector()">&times;</button>
+            </div>
+            <div class="filters-container">
+                <div class="filter-section">
+                    <h3 class="filter-title">Categories</h3>
+                    <div id="category-filters" class="filter-options"></div>
+                </div>
+                <div class="filter-section">
+                    <h3 class="filter-title">Providers</h3>
+                    <div id="provider-filters" class="filter-options"></div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="appGrid" class="app-grid">
+                    <!-- Available apps will be loaded here -->
+                </div>
             </div>
             <div style="margin-top: 20px; text-align: right;">
                 <button class="button" onclick="closeAppSelector()">Cancel</button>
