@@ -106,14 +106,20 @@ function setupRoutes() {
             '/upload-image',
             '/api/publish',
             '/api/images',
-            '/api/gallery',
+            '/api/microappgallery',
+            '/api/microappgallery/:id/image',
             '/api/categories',
             '/api/providers',
             '/api/micro-app/:id',
-            '/api/upvote/:id',
+            '/api/upvotemicroapp/:id',
             '/api/generate-micro-app',
             '/publish-preview',
-            '/published-preview/:id'
+            '/published-preview/:id',
+            '/api/cardgallery',
+            '/api/cardgallery/:id/image',
+            '/api/card/:id',
+            '/api/upvotecard/:id',
+            '/api/downvotecard/:id'
         ];
         
         res.json({ 
@@ -317,46 +323,15 @@ function setupRoutes() {
     });
 
     // Add endpoint to get all micro-apps
-    app.get('/api/gallery', async (req, res) => {
+    app.get('/api/microappgallery', async (req, res) => {
         try {
-            const collection = db.collection('images');
-            const microApps = await collection.find({}).toArray();
-            
+            const microAppsCollection = db.collection('images');
+            const microApps = await microAppsCollection.find({}).toArray();
             console.log('Found micro-apps:', microApps.length);
-            
-            // If no apps found, return an empty array with a default app
-            if (microApps.length === 0) {
-                console.log('No apps found, returning default app');
-                return res.json([{
-                    _id: 'default',
-                    title: 'Sample App',
-                    description: 'A sample micro-app',
-                    icon: 'fas fa-cube',
-                    categories: ['sample'],
-                    providers: ['default']
-                }]);
-            }
-            
-            if (microApps.length > 0) {
-                console.log('Sample app:', {
-                    id: microApps[0]._id,
-                    hasImage: !!microApps[0].image,
-                    imagePreview: microApps[0].image ? microApps[0].image.substring(0, 100) + '...' : 'no image'
-                });
-            }
-            
-            // Ensure categories and providers are arrays, even if they're undefined
-            const processedApps = microApps.map(app => ({
-                ...app,
-                categories: app.categories || [],
-                providers: app.providers || [],
-                icon: app.icon || 'fas fa-cube'  // Ensure there's always an icon
-            }));
-            
-            res.json(processedApps);
+            res.json(microApps);
         } catch (error) {
-            console.error('Error fetching gallery:', error);
-            res.status(500).json({ error: 'Failed to fetch gallery' });
+            console.error('Error fetching micro-apps:', error);
+            res.status(500).json({ error: 'Internal server error' });
         }
     });
 
@@ -378,7 +353,7 @@ function setupRoutes() {
     });
 
     // Update upvotes for a micro-app
-    app.post('/api/gallery/:id/upvote', async (req, res) => {
+    app.post('/api/upvotemicroapp/:id', async (req, res) => {
         try {
             console.log('Upvoting micro-app:', req.params.id);
             const id = new ObjectId(req.params.id);
@@ -476,7 +451,7 @@ function setupRoutes() {
     });
 
     // Get image for a specific micro-app
-    app.get('/api/gallery/:id/image', async (req, res) => {
+    app.get('/api/microappgallery/:id/image', async (req, res) => {
         try {
             console.log('Fetching image for id:', req.params.id);
             let id;
@@ -970,6 +945,119 @@ type MicroAppFunctionActionSettings = {
                 error: 'Failed to retrieve preview',
                 details: error.message 
             });
+        }
+    });
+
+    // Card Gallery Routes
+    const cardsCollection = db.collection('cards');
+    app.get('/api/cardgallery', async (req, res) => {
+        try {
+            const cards = await cardsCollection.find({}).toArray();
+            res.json(cards);
+        } catch (error) {
+            console.error('Error fetching cards:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+
+        // Get image for a specific micro-app
+        app.get('/api/cardgallery/:id/image', async (req, res) => {
+            try {
+                console.log('Fetching image for id:', req.params.id);
+                let id;
+                try {
+                    id = new ObjectId(req.params.id);
+                } catch (error) {
+                    console.error('Invalid ObjectId:', req.params.id);
+                    return res.status(400).json({ error: 'Invalid ID format' });
+                }
+    
+                const card = await db.collection('cards').findOne({ _id: id });
+                console.log('Found card:', card ? 'yes' : 'no');
+                
+                if (!card) {
+                    console.error('card not found for id:', req.params.id);
+                    return res.status(404).json({ error: 'card not found' });
+                }
+    
+                if (!card.image) {
+                    console.error('Image data missing for id:', req.params.id);
+                    return res.status(404).json({ error: 'Image data missing' });
+                }
+    
+                console.log('Image data type:', typeof card.image);
+                console.log('Image data preview:', microApp.image.substring(0, 100) + '...');
+                
+                // Extract image data and content type from the data URL
+                const matches = card.image.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+                console.log('Image data format valid:', matches ? 'yes' : 'no');
+                
+                if (!matches || matches.length !== 3) {
+                    console.error('Invalid image data format');
+                    return res.status(400).json({ error: 'Invalid image data format' });
+                }
+                
+                const contentType = matches[1];
+                const imageData = Buffer.from(matches[2], 'base64');
+                
+                console.log('Content-Type:', contentType);
+                console.log('Image data size:', imageData.length, 'bytes');
+    
+                res.set('Content-Type', contentType);
+                res.send(imageData);
+            } catch (error) {
+                console.error('Error fetching image:', error);
+                res.status(500).json({ error: 'Failed to fetch image', details: error.message });
+            }
+        });
+
+    app.get('/api/card/:id', async (req, res) => {
+        try {
+            const id = req.params.id;
+            const card = await cardsCollection.findOne({ _id: new ObjectId(id) });
+            if (!card) {
+                return res.status(404).json({ error: 'Card not found' });
+            }
+            res.json(card);
+        } catch (error) {
+            console.error('Error fetching card:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+
+    app.post('/api/upvotecard/:id', async (req, res) => {
+        try {
+            const id = req.params.id;
+            const result = await cardsCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $inc: { upvotes: 1 } }
+            );
+            if (result.modifiedCount === 0) {
+                return res.status(404).json({ error: 'Card not found' });
+            }
+            const updatedCard = await cardsCollection.findOne({ _id: new ObjectId(id) });
+            res.json({ upvotes: updatedCard.upvotes });
+        } catch (error) {
+            console.error('Error upvoting card:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    });
+
+    app.post('/api/downvotecard/:id', async (req, res) => {
+        try {
+            const id = req.params.id;
+            const result = await cardsCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $inc: { upvotes: -1 } }
+            );
+            if (result.modifiedCount === 0) {
+                return res.status(404).json({ error: 'Card not found' });
+            }
+            const updatedCard = await cardsCollection.findOne({ _id: new ObjectId(id) });
+            res.json({ upvotes: updatedCard.upvotes });
+        } catch (error) {
+            console.error('Error downvoting card:', error);
+            res.status(500).json({ error: 'Internal server error' });
         }
     });
 }

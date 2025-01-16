@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Micro-app Gallery</title>
+    <title>Adaptive Cards Gallery</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,15 +19,14 @@
             <span class="nav-title">Lumapps Micro-apps</span>
         </div>
         <div class="nav-links">
-            <a href="index.html" class="nav-link">Generator</a>
-            <a href="gallery.html" class="nav-link active">Gallery</a>
+            <a href="index.html" class="nav-link active">Micro-apps Gallery</a>
+            <a href="cards-gallery.html" class="nav-link">Cards Gallery</a>
             <a href="preview.html" class="nav-link">Preview</a>
         </div>
     </nav>
-
     <main class="container">
         <div class="gallery-container">
-            <h1 class="gallery-title">Micro-app Gallery</h1>
+            <h1 class="gallery-title">Cards Gallery</h1>
             <div class="filters-container">
                 <div class="filter-section">
                     <h3 class="filter-title">Categories</h3>
@@ -38,7 +37,7 @@
                     <div id="provider-filters" class="filter-options"></div>
                 </div>
             </div>
-            <div id="microAppCards" class="micro-app-cards">
+            <div id="cardsContainer" class="cards">
                 <!-- Micro-app cards will be dynamically inserted here -->
             </div>
         </div>
@@ -67,9 +66,7 @@
                         <button id="downloadCardJson" class="modal-button">
                             <i class="fas fa-code"></i> Get Card JSON
                         </button>
-                        <button id="generateMicroApp" class="modal-button primary">
-                            <i class="fas fa-code"></i> Get Full Micro-App JSON
-                        </button>
+                        
                     </div>
                 </div>
             </div>
@@ -94,6 +91,6 @@
 
     </main>
 
-    <script src="gallery.js"></script>
+    <script src="cardsgallery.js"></script>
 </body>
 </html>
