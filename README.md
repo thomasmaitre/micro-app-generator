@@ -67,3 +67,11 @@ Open `index.html` in your browser or serve it using a local server.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+Restart le serveur sur localhost:8000:
+
+taskkill /F /IM node.exe
+npx http-server . -p 8000
+
+node server.js   (pour la DB mongo)
+

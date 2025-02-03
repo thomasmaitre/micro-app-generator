@@ -3,157 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LumApps Micro-apps - Prompt you next micro-app and get inspired</title>
+    <title>Micro-app Gallery</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-    <script src="https://unpkg.com/adaptivecards@2.11.2/dist/adaptivecards.min.js"></script>
-    <script>
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            console.error('Error: ' + msg + '\nURL: ' + url + '\nLine: ' + lineNo + '\nColumn: ' + columnNo + '\nError object: ' + JSON.stringify(error));
-            return false;
-        };
-    </script>
 </head>
 <body>
     <nav class="main-navigation">
         <div class="nav-logo">
             <img src="https://res.cloudinary.com/vizir2/image/upload/v1732533463/Companion-icon_rw3nk3.png" alt="Logo" class="logo">
-            <span class="nav-title">LumApps Micro-apps</span>
+            <span class="nav-title">Lumapps Micro-apps</span>
         </div>
         <div class="nav-links">
-            <a href="index.html" class="nav-link active">Generator</a>
-            <a href="gallery.html" class="nav-link">Gallery</a>
+            <a href="index.html" class="nav-link active">Micro-apps Gallery</a>
+            <a href="cards-gallery.html" class="nav-link">Cards Gallery</a>
             <a href="preview.html" class="nav-link">Preview</a>
         </div>
     </nav>
 
-    <div class="container">
-        <div class="container-index">
-            <div class="left-panel">
-                <div class="panel-header">
-                    <h1>Micro-app Generator</h1>
+    <main class="container">
+        <div class="gallery-container">
+            <div class="gallery-header">
+                <h1 class="gallery-title">Micro-apps Gallery</h1>
+                <button class="new-button" id="newMicroAppBtn" onClick="window.open('https://docs.google.com/forms/d/e/1FAIpQLSewbTcBHHtK_5jkojSStw0kIgaT-VycVLf0-JLilBgW3F8sNA/viewform?usp=sharing')">
+                    <i class="fas fa-plus"></i> New
+                </button>
+            </div>
+            <div class="filters-container">
+                <div class="filter-section">
+                    <h3 class="filter-title">Categories</h3>
+                    <div id="category-filters" class="filter-options"></div>
                 </div>
-                <textarea id="appDescription" placeholder="Describe your micro-app (e.g., 'A contact form with name, email, and message fields')"></textarea>
-                <button id="generateBtn">Generate Card</button>
-                
-                <div class="form-group">
-                    <label for="backgroundColor">Background Color:</label>
-                    <div class="color-input-container">
-                        <input type="color" id="backgroundColor" value="#ffffff">
-                        <span id="colorPreview">#FFFFFF</span>
-                    </div>
-                </div>
-                
-                <div class="actions-group">
-                    <button id="downloadBtn" class="action-button">
-                        <i class="fas fa-download"></i>
-                        Download as PNG
-                    </button>
-                    <button id="shareBtn" class="action-button">
-                        <i class="fas fa-link"></i>
-                        Get Shareable Link
-                    </button>
-                    <button id="publishBtn" class="action-button">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        Publish to Gallery
-                    </button>
+                <div class="filter-section">
+                    <h3 class="filter-title">Providers</h3>
+                    <div id="provider-filters" class="filter-options"></div>
                 </div>
             </div>
-            
-            <div class="right-panel" id="appPreview">
-                <div id="microApp">
-                    <div id="adaptiveCardContainer"></div>
-                    <div id="empty-state" class="empty-state">
-                        <i class="fas fa-solid fa-wand-magic-sparkles fa-2x"></i>
-                        <p>Hey there! Ready to create some magic?<br>
-                        Just describe your micro-app and I'll bring it to life! </p>
+            <div id="microAppCards" class="micro-app-cards">
+                <!-- Micro-app cards will be dynamically inserted here -->
+            </div>
+        </div>
+    <!-- Gallery Card Modal -->
+    <div id="galleryCardModalDetails" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <div class="modal-grid">
+                <div class="modal-left">
+                    <img id="modalCardImage" src="" alt="Card Preview" class="modal-image">
+                </div>
+                <div class="modal-right">
+                    <h2 id="modalTitle" class="modal-title"></h2>
+                    <p id="modalDescription" class="modal-description"></p>
+                    <div class="modal-metadata">
+                        <div class="metadata-section">
+                            <h3>Category</h3>
+                            <div id="modalCategories" class="tag-container"></div>
+                        </div>
+                        <div class="metadata-section">
+                            <h3>Supported Providers</h3>
+                            <div id="modalProviders" class="tag-container"></div>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button id="downloadCardJson" class="modal-button">
+                            <i class="fas fa-code"></i> Get Card JSON
+                        </button>
+                        <button id="downloadMicroappJson" class="modal-button primary">
+                            <i class="fas fa-code"></i> Get Full Micro-App JSON
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Publish Modal -->
-    <div id="publishModal" class="modal">
+
+    <!-- JSON Modal -->
+    <div id="jsonModal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Publish to Gallery</h2>
-                <button class="modal-close">&times;</button>
+                <h2>Card JSON</h2>
+                <span class="close-button" onclick="closeJsonModal()">&times;</span>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label for="publishTitle">Title</label>
-                    <input type="text" id="publishTitle" placeholder="Enter a title for your micro-app">
-                </div>
-                <div class="form-group">
-                    <label for="publishDescription">Description</label>
-                    <textarea id="publishDescription" placeholder="Enter a description for your micro-app"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="categoryInput">Categories</label>
-                    <div class="tags-container">
-                        <div class="selected-tags" id="selectedCategories"></div>
-                        <input type="text" id="categoryInput" placeholder="Add a custom category">
-                    </div>
-                    <div class="predefined-tags" id="categoryTags">
-                        <button class="tag-btn">IT</button>
-                        <button class="tag-btn">HR</button>
-                        <button class="tag-btn">Facility Management</button>
-                        <button class="tag-btn">Finance</button>
-                        <button class="tag-btn">Procurement</button>
-                        <button class="tag-btn">Sales</button>
-                        <button class="tag-btn">Ops</button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="providersInput">Providers</label>
-                    <div class="tags-container">
-                        <div class="selected-tags" id="selectedProviders"></div>
-                        <input type="text" id="providersInput" placeholder="Add a custom provider">
-                    </div>
-                    <div class="predefined-tags providers-tags" id="providerTags">
-                        <button class="tag-btn">Atlassian</button>
-                        <button class="tag-btn">Google</button>
-                        <button class="tag-btn">Microsoft Graph</button>
-                        <button class="tag-btn">Salesforce</button>
-                        <button class="tag-btn">SAP</button>
-                        <button class="tag-btn">ServiceNow</button>
-                        <button class="tag-btn">Workday</button>
-                        <button class="tag-btn">Zendesk</button>
-                        <button class="tag-btn">Adobe</button>
-                        <button class="tag-btn">Azure Open AI</button>
-                        <button class="tag-btn">Box</button>
-                        <button class="tag-btn">Cegid</button>
-                        <button class="tag-btn">Talentsoft</button>
-                        <button class="tag-btn">Coveo</button>
-                        <button class="tag-btn">Datadog</button>
-                        <button class="tag-btn">Easyvista</button>
-                        <button class="tag-btn">GitHub</button>
-                        <button class="tag-btn">Okta</button>
-                        <button class="tag-btn">Open AI</button>
-                        <button class="tag-btn">PagerDuty</button>
-                        <button class="tag-btn">Slack</button>
-                        <button class="tag-btn">Spotify</button>
-                        <button class="tag-btn">Greenhouse</button>
-                        <button class="tag-btn">Lucca</button>
-                        <button class="tag-btn">MistralAI</button>
-                        <button class="tag-btn">Zapier</button>
-                        <button class="tag-btn">Zoom</button>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="publishNowBtn" class="action-button">Publish Now</button>
+                <pre id="jsonContent" class="json-display"></pre>
+                <button id="copyJsonButton" class="modal-button">
+                    <i class="fas fa-copy"></i> Copy to Clipboard
+                </button>
             </div>
         </div>
     </div>
-    
-    <script src="script.js"></script>
+
+    </main>
+
+    <script src="gallery.js"></script>
 </body>
 </html>

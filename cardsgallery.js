@@ -4,8 +4,8 @@ const API_URL = window.location.hostname === 'localhost'
     : 'https://web-production-72b3.up.railway.app';
 
 document.addEventListener('DOMContentLoaded', async () => {
-    let microApps = [];
-    const microAppCards = document.getElementById('microAppCards');
+    let cards = [];
+    const cardsContainer = document.getElementById('cardsContainer');
     const activeFilters = {
         categories: new Set(),
         providers: new Set()
@@ -60,46 +60,46 @@ document.addEventListener('DOMContentLoaded', async () => {
             activeFilters[type].add(value);
             element.classList.add('active');
         }
-        filterMicroApps();
+        filterCards();
     }
 
-    // Filter micro-apps based on active filters
-    function filterMicroApps() {
-        const filteredApps = microApps.filter(app => {
+    // Filter cards based on active filters
+    function filterCards() {
+        const filteredApps = cards.filter(app => {
             const categoryMatch = activeFilters.categories.size === 0 || 
                 app.categories.some(cat => activeFilters.categories.has(cat));
             const providerMatch = activeFilters.providers.size === 0 || 
                 app.providers.some(prov => activeFilters.providers.has(prov));
             return categoryMatch && providerMatch;
         });
-        displayMicroApps(filteredApps);
+        displayCards(filteredApps);
     }
 
-    // Fetch micro-apps from the server
-    async function fetchMicroApps() {
+    // Fetch cards from the server
+    async function fetchCards() {
         try {
-            const response = await fetch(`${API_URL}/api/microappgallery`);
-            if (!response.ok) throw new Error('Failed to fetch micro-apps');
-            microApps = await response.json();
-            displayMicroApps(microApps);
+            const response = await fetch(`${API_URL}/api/cardgallery`);
+            if (!response.ok) throw new Error('Failed to fetch cards');
+            cards = await response.json();
+            displayCards(cards);
         } catch (error) {
-            console.error('Error fetching micro-apps:', error);
-            microAppCards.innerHTML = '<p class="error-message">Failed to load micro-apps. Please try again later.</p>';
+            console.error('Error fetching cards:', error);
+            cardsContainer.innerHTML = '<p class="error-message">Failed to load cards. Please try again later.</p>';
         }
     }
 
-    // Display micro-apps in cards
-    function displayMicroApps(apps) {
-        microAppCards.innerHTML = '';
+    // Display cards in cards
+    function displayCards(apps) {
+       cardsContainer.innerHTML = '';
         
         if (apps.length === 0) {
-            microAppCards.innerHTML = '<p class="no-results">No micro-apps found matching your filters.</p>';
+            cardsContainer.innerHTML = '<p class="no-results">No cards found matching your filters.</p>';
             return;
         }
 
         apps.forEach(app => {
             const card = document.createElement('div');
-            card.className = 'micro-app-card';
+            card.className = 'card';
             card.onclick = () => openModal(app._id);
             card.innerHTML = `
                 <div class="card-content">
@@ -117,7 +117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                 </div>
             `;
-            microAppCards.appendChild(card);
+            cardsContainer.appendChild(card);
         });
     }
 
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Make openModal function globally available
     window.openModal = async function(appId) {
         currentAppId = appId;
-        const app = microApps.find(app => app._id === appId);
+        const app = cards.find(app => app._id === appId);
         if (!app) {
             console.error('App not found');
             return;
@@ -170,10 +170,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Set up button handlers
         const downloadCardBtn = document.getElementById('downloadCardJson');
-        const downloadMicroappBtn = document.getElementById('downloadMicroappJson');
+        
 
         if (downloadCardBtn) downloadCardBtn.onclick = () => downloadJSON(appId);
-        if (downloadMicroappBtn) downloadMicroappBtn.onclick = () => downloadJSON(appId);
+      
 
         // Show modal
         modal.style.display = 'block';
@@ -202,8 +202,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Download JSON function
     async function downloadJSON(appId) {
         try {
-            const response = await fetch(`${API_URL}/api/micro-app/${appId}`);
-            if (!response.ok) throw new Error('Failed to fetch micro-app data');
+            const response = await fetch(`${API_URL}/api/card/${appId}`);
+            if (!response.ok) throw new Error('Failed to fetch card data');
             const data = await response.json();
             
             // Get only the cardJson from the response
@@ -256,7 +256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Toggle upvote function
     async function toggleUpvote(appId, button) {
         try {
-            const response = await fetch(`${API_URL}/api/upvotemicroapp/${appId}`, {
+            const response = await fetch(`${API_URL}/api/upvotecard/${appId}`, {
                 method: 'POST'
             });
             if (!response.ok) throw new Error('Failed to toggle upvote');
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize the gallery
     async function initGallery() {
         await populateFilters();
-        await fetchMicroApps();
+        await fetchCards();
     }
 
     // Initialize the gallery
