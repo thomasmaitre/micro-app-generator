@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         apps.forEach(app => {
             const card = document.createElement('div');
-            card.className = 'cards';
+            card.className = 'card';
             card.onclick = () => openModal(app._id);
             card.innerHTML = `
                 <div class="card-content">
