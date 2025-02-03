@@ -2577,3 +2577,16 @@ input[type="color"]::-webkit-color-swatch {
 .app-card .app-icon {
     display: none;
 }
+
+/* Gallery Header Styles */
+.gallery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+.gallery-title {
+    margin: 0;
+}
